@@ -1,3 +1,8 @@
+DO NOT USE THIS LIBRARY, IT'S UNDER CONSTRUCTION AND METHODS AND SUCH ARE CHANING DAILY
+
+ALMOST DONE....
+
+
 # BulletDB
 Database system for SPI-based flash memory chips
 
