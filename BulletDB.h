@@ -1,9 +1,3 @@
-// todo document everything....
-
-
-
-
-
 /*
   The MIT License (MIT)
 
@@ -49,9 +43,12 @@
 #endif
 
 #include <SPI.h>  
+#include <SPI.h>  
 
 #define MAX_FIELDS 20
-#define MAX_CHAR_LEN 30
+#define MAXCHARLEN 20
+
+#define MAXDATACHARLEN 15
 
 #define CARD_SIZE 8384511
 #define PAGE_SIZE 4096
@@ -59,14 +56,20 @@
 #define SPEED_WRITE 25000000
 #define SPEED_READ 25000000
 
-#define DT_U8 	0
-#define DT_INT 	1
-#define DT_I16 	2
-#define DT_U16 	3
+#define DT_U8 	1
+#define DT_INT 	2
+#define DT_I16 	3
+#define DT_U16 	4
 #define DT_I32 	5
 #define DT_U32 	6
 #define DT_FLOAT 7
-	
+#define DT_DOUBLE 8
+#define DT_CHAR 9
+
+#define CHIP_NEW 0
+#define CHIP_OK 1
+#define CHIP_INVALID -1
+#define CHIP_FULL -2
 
 #define PAGE 4096
 #define PAGES 2048
@@ -95,7 +98,6 @@
 #define COMPLETE      0x05
 #define RECOVERY 2
 
-
 class  BulletDB {
 		
 public:
@@ -104,24 +106,33 @@ public:
 	
 	bool init();
 	
-	bool getChipID();
-	
-	uint8_t addField(const char *FieldName, uint8_t *Data);
-	
+	uint8_t addField(const char *FieldName, uint8_t *Data);	
 	uint8_t addField(const char *FieldName, int *Data);
-	
 	uint8_t addField(const char *FieldName, int16_t *Data);
-	
 	uint8_t addField(const char *FieldName, uint16_t *Data);
-	
 	uint8_t addField(const char *FieldName, uint32_t *Data);
-	
 	uint8_t addField(const char *FieldName, int32_t *Data);
-	
 	uint8_t addField(const char *FieldName, float *Data);
+	uint8_t addField(const char *FieldName, double *Data);
+	uint8_t addField(const char *FieldName, char  *Data, uint8_t len);
 	
-	// uint8_t addField(const char *FieldName, char *Data);
+	uint8_t addHeaderField(const char *FieldName, uint8_t *Data);
+	uint8_t addHeaderField(const char *FieldName, int *Data);
+	uint8_t addHeaderField(const char *FieldName, int16_t *Data);
+	uint8_t addHeaderField(const char *FieldName, uint16_t *Data);
+	uint8_t addHeaderField(const char *FieldName, uint32_t *Data);
+	uint8_t addHeaderField(const char *FieldName, int32_t *Data);
+	uint8_t addHeaderField(const char *FieldName, float *Data);
+	uint8_t addHeaderField(const char *FieldName, double *Data);
 	
+	int32_t readTotalRecords();
+	
+	int32_t getLastRecord();
+		
+	int32_t gotoLastRecord();
+	
+	char *getChipID();
+		
 	uint32_t getAddress();
 	
 	void setAddress(uint32_t Address);
@@ -130,82 +141,105 @@ public:
 	
 	void gotoAbsoluteFirstRecord();
 	
-	uint16_t getLastRecord();
-	
 	uint32_t getRecords();
 	
 	uint32_t getCurrentRecord();
 	
 	uint32_t getTotalRecords();
 	
+	uint32_t getHeaderRecord();
+	
+	uint32_t setHeaderRecord();
+	
 	void eraseAll();
+	
+	void dumpBytes();
 
 	void erasePage(uint32_t PageNumber);
-
-	// uint32_t closeRecord();
 
 	uint32_t addRecord();
 
 	uint32_t saveRecord();
+	
+	uint32_t saveHeader();
 
 	void listFields();
+	
+	void listHeaderFields();
 
 	uint8_t getFieldCount();
+	
+	uint8_t getHeaderFieldCount();
+	
+	uint8_t getFieldDataType(uint8_t Index);
 
 	char * getFieldName(uint8_t Index);
+	
+	char * getHeaderFieldName(uint8_t Index);
+	
+	uint16_t getRecordLength();
 
-	uint8_t getRecordLength();
+	uint16_t getHeaderRecordLength();
 
 	uint32_t getUsedSpace();
 	
 	uint32_t getTotalSpace();	
 	
-	void dumpData();
+	uint8_t getField(uint8_t Data, uint8_t Field);
+	int getField(int Data, uint8_t Field);
+	int16_t getField(int16_t Data, uint8_t Field);
+	uint16_t getField(uint16_t Data, uint8_t Field);
+	int32_t getField(int32_t Data, uint8_t Field);
+	uint32_t getField(uint32_t Data, uint8_t Field);
+	float getField(float Record, uint8_t Field);
+	double getField(double Record, uint8_t Field);
+	char *getCharField(uint8_t Field);
 	
-	// goofy but with all these data types return a float for now
-	// todo make load funcations to return correct data type
-	float getField(uint32_t Record, uint8_t Field);
-	
-	void writeSpecialField(uint32_t AddressOffset, uint8_t Data);
-	void writeSpecialField(uint32_t AddressOffset, int Data);
-	void writeSpecialField(uint32_t AddressOffset, int16_t Data);
-	void writeSpecialField(uint32_t AddressOffset, uint16_t Data);
-	void writeSpecialField(uint32_t AddressOffset, int32_t Data);
-	void writeSpecialField(uint32_t AddressOffset, uint32_t Data);
-	void writeSpecialField(uint32_t AddressOffset, float Data);
-	//void writeSpecialField(uint32_t AddressOffset, char Data);
-	
-
-	uint8_t getSpecialField(uint32_t Record, uint32_t AddressOffset, uint8_t Data);
-	int getSpecialField(uint32_t Record, uint32_t AddressOffset, int Data);
-	int16_t getSpecialField(uint32_t Record, uint32_t AddressOffset, int16_t Data);
-	uint16_t getSpecialField(uint32_t Record, uint32_t AddressOffset, uint16_t Data);
-	int32_t getSpecialField(uint32_t Record, uint32_t AddressOffset, int32_t Data);
-	uint32_t getSpecialField(uint32_t Record, uint32_t AddressOffset, uint32_t Data);
-	float getSpecialField(uint32_t Record, uint32_t AddressOffset, float Data);
-	//char getSpecialField(uint32_t Record, uint32_t AddressOffset, char Data);
+	uint8_t getHeaderField(uint8_t Data, uint8_t Field);
+	int getHeaderField(int Data, uint8_t Field);
+	int16_t getHeaderField(int16_t Data, uint8_t Field);
+	uint16_t getHeaderField(uint16_t Data, uint8_t Field);
+	int32_t getHeaderField(int32_t Data, uint8_t Field);
+	uint32_t getHeaderField(uint32_t Data, uint8_t Field);
+	float getHeaderField(float Record, uint8_t Field);
+	double getHeaderField(double Record, uint8_t Field);
+	char *getHeaderField(uint8_t Field);
+	char *getCharHeaderField(uint8_t Field);
 	
 	
-	
+	//float getHeaderField(uint8_t Field);
+	//char *getCharHeaderField(uint32_t Record, uint8_t Field);
+		
 private:
 
+	unsigned char c;
+
 	void DebugData(int Line);
-		uint8_t ReadData();
-	void WriteData(uint8_t data);
 	
+	int16_t readChipID();
+	
+	
+	bool ReadComplete = false;
+	char stng[MAXDATACHARLEN];
+	uint8_t ReadData();
+	void WriteData(uint8_t data);
+	char ChipID[9];
 	uint8_t a1Byte;
 	uint8_t a2Bytes[2];
 	uint8_t a4Bytes[4];
+	uint8_t a8Bytes[8];
 	char dateBytes[8];
-	bool Special = false;
+	bool NewCard = false;
 	uint32_t TempAddress = 0;
+	uint32_t UsedAddress = 0;
 	uint32_t Address = 0;
-	uint32_t RecordID = 0;
+	uint32_t NextWritableAddress = 0;
 	uint32_t Records = 0;
 	uint32_t CurrentRecord = 0;
 	uint32_t TotalRecords = 0;
-	uint32_t i;
-	char fieldname[MAX_FIELDS][MAX_CHAR_LEN];
+	uint32_t i, j;
+	
+	
 	uint8_t FieldCount = 0;
 	uint8_t cspin;
 	uint8_t RecordLength;
@@ -214,7 +248,8 @@ private:
 	uint8_t DataType[MAX_FIELDS];
 	uint8_t FieldStart[MAX_FIELDS];
 	uint8_t FieldLength[MAX_FIELDS];
-	
+	char fieldname[MAX_FIELDS][MAXCHARLEN];
+		
 	uint8_t *u8data[MAX_FIELDS];
 	int *intdata[MAX_FIELDS];
 	int16_t *i16data[MAX_FIELDS];
@@ -222,11 +257,29 @@ private:
 	int32_t *i32data[MAX_FIELDS];
 	uint32_t *u32data[MAX_FIELDS];
 	float *fdata[MAX_FIELDS];
+	double *ddata[MAX_FIELDS];
+	char *cdata[MAX_FIELDS];
+	char buf[MAXDATACHARLEN];
 	
-	uint8_t bytes2[2];
-	uint8_t bytes4[4];
-	uint8_t bytes8[4];
-	uint8_t bytesc[];
+		// header stuff
+	uint32_t Header_Record = 0;
+	uint8_t Header_RecordLength;
+	uint8_t Header_FieldCount = 0;
+	
+	uint8_t Header_DataType[MAX_FIELDS];
+	uint8_t Header_FieldStart[MAX_FIELDS];
+	uint8_t Header_FieldLength[MAX_FIELDS];
+	char Header_FieldName[MAX_FIELDS][MAXCHARLEN];
+	
+	uint8_t 	*u8hdata[MAX_FIELDS];
+	int 		*inthdata[MAX_FIELDS];
+	int16_t 	*i16hdata[MAX_FIELDS];
+	uint16_t 	*u16hdata[MAX_FIELDS];
+	int32_t 	*i32hdata[MAX_FIELDS];
+	uint32_t 	*u32hdata[MAX_FIELDS];
+	float 		*fhdata[MAX_FIELDS];
+	double 		*dhdata[MAX_FIELDS];
+
 	unsigned char flash_wait_for_write = 0;
 	uint8_t readvalue;
 	void write_pause(void);
@@ -237,9 +290,8 @@ private:
 	void B4ToBytes(uint8_t *bytes, int var);
 	void B4ToBytes(uint8_t *bytes, int32_t var);
 	void B4ToBytes(uint8_t *bytes, uint32_t var);
-	void FloatToBytes(uint8_t *bytes_temp, float float_variable);
-	
-
+	void FloatToBytes(uint8_t *bytes, float var);
+	void DoubleToBytes(uint8_t *bytes, double var);
 };
 
 
