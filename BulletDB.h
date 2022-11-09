@@ -27,6 +27,35 @@
 
 
 */
+/*
+to do
+
+1. add methods to set read/write/erase instructions
+2. remove addrecord
+3. clean up some of the get stuff--not srue all are needed
+4. resolve waht is returned an address or record --probably a record
+5. maybe get rid of dumpdata or make private or protected
+6. maybe get rid of address dump or make private
+7. add methods to set the chip size
+8. remove manafest constant to set secot size--since we don't use iter_swap
+9. remove all the manafest constants that are not used
+10. fix the names and such for the wird timing functions
+11. write an example for multi file approach
+12. maybe where we dump all recordsetID and user can print one to screen?
+13. start writing better read me
+1. intent for library
+2. typical use cases
+3. how it works
+4. what it can do
+5. what it can't do
+6. list of methods and explaination
+7. timing graph?
+8. maybe show some serial output code?
+9. definately show a sensor with reads ever 5 ms/ 100 ms/ 500 ms (maybe accelerameter) 
+14. limitations
+15. how to adapt to other chips (read data sheet and get size and instruction codes
+16. test with my other chips
+*/
 
 #ifndef BULLETDB_MENU_H
 #define BULLETDB_MENU_H
@@ -43,18 +72,22 @@
 #endif
 
 #include <SPI.h>  
-#include <SPI.h>  
+
+#define BULLET_DB_VER 1.04
+
+#define NULL_RECORD 0xFF
 
 #define MAX_FIELDS 20
 #define MAXCHARLEN 20
 
 #define MAXDATACHARLEN 15
 
+// #define CARD_SIZE 520191
 #define CARD_SIZE 8384511
 #define PAGE_SIZE 4096
 
 #define SPEED_WRITE 25000000
-#define SPEED_READ 25000000
+#define SPEED_READ  25000000
 
 #define DT_U8 	1
 #define DT_INT 	2
@@ -70,30 +103,41 @@
 #define CHIP_OK 1
 #define CHIP_INVALID -1
 #define CHIP_FULL -2
+#define CHIP_FORCE_RESTART -3
 
+#define CMD_READ_DATA          0x03
+#define CMD_CHIP_ERASE         0xC7
+#define CMD_WRITE_ENABLE       0x06
+#define CMD_WRITE_STATUS_REG   0x01
+#define CMD_READ_STATUS_REG    0x05
+#define CMD_SECTOR_ERASE       0x20//not tested
+#define STAT_WIP 1
+
+/*
 #define PAGE 4096
 #define PAGES 2048
-#define STAT_WIP 1
+
 #define STAT_WEL 2
-#define CMD_WRITE_STATUS_REG   0x01
+
 #define CMD_PAGE_PROGRAM       0x02
-#define CMD_READ_DATA          0x03
+
 #define CMD_WRITE_DISABLE      0x04//not tested
-#define CMD_READ_STATUS_REG    0x05
-#define CMD_WRITE_ENABLE       0x06
+
+
 #define CMD_READ_HIGH_SPEED    0x0B//not tested
-#define CMD_SECTOR_ERASE       0x20//not tested
+
 #define CMD_BLOCK32K_ERASE     0x52//not tested
 #define CMD_RESET_DEVICE       0xF0//<<-different from winbond
 #define CMD_READ_ID            0x9F
 #define CMD_RELEASE_POWER_DOWN 0xAB//not tested
 #define CMD_POWER_DOWN         0xB9//not tested
-#define CMD_CHIP_ERASE         0xC7
+*/
 #define CMD_BLOCK64K_ERASE     0xD8//not tested
 #define WRITEENABLE   0x06
 #define WRITE         0x02
 #define READ          0x03
 #define RID           0xAB
+#define JEDEC         0x9F
 #define CHIPERASE     0x60
 #define COMPLETE      0x05
 #define RECOVERY 2
@@ -131,7 +175,7 @@ public:
 		
 	int32_t gotoLastRecord();
 	
-	char *getChipID();
+	char *getChipJEDEC();
 		
 	uint32_t getAddress();
 	
@@ -147,13 +191,9 @@ public:
 	
 	uint32_t getTotalRecords();
 	
-	uint32_t getHeaderRecord();
-	
-	uint32_t setHeaderRecord();
-	
 	void eraseAll();
 	
-	void dumpBytes();
+	void dumpBytes(uint8_t RecLen, uint32_t Recs);
 
 	void erasePage(uint32_t PageNumber);
 
@@ -216,14 +256,15 @@ private:
 
 	void DebugData(int Line);
 	
-	int16_t readChipID();
+	int16_t readChipJEDEC();
 	
+	unsigned long bt = 0;
 	
 	bool ReadComplete = false;
 	char stng[MAXDATACHARLEN];
 	uint8_t ReadData();
 	void WriteData(uint8_t data);
-	char ChipID[9];
+	char ChipJEDEC[9];
 	uint8_t a1Byte;
 	uint8_t a2Bytes[2];
 	uint8_t a4Bytes[4];
@@ -262,7 +303,6 @@ private:
 	char buf[MAXDATACHARLEN];
 	
 		// header stuff
-	uint32_t Header_Record = 0;
 	uint8_t Header_RecordLength;
 	uint8_t Header_FieldCount = 0;
 	
@@ -282,8 +322,8 @@ private:
 
 	unsigned char flash_wait_for_write = 0;
 	uint8_t readvalue;
-	void write_pause(void);
-	unsigned char flash_read_status(void);
+	void write_pause();
+	unsigned char flash_read_status();
 	
 	void B2ToBytes(uint8_t *bytes, int16_t var);
 	void B2ToBytes(uint8_t *bytes, uint16_t var);
