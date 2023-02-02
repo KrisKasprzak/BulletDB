@@ -4,7 +4,20 @@ ALMOST DONE....
 
 
 # BulletDB
-Database system for SPI-based flash memory chips
+Remember the infamous DBase III? Here it is. A database system for SPI-based flash memory chips intended for microcontrollers like the mighty Teensy. This database driver uses a field/record approach in saving data to a chip. While you can save data to and SD card, the classic open/write/save has a huge overhead the can take in the 100's if ms to execute. This driver can save ~50 bytes in around 2ms. Data on the chip can be downloaded to and SD card for portable transfer to a PC. 
+
+This driver is intended for data acquistion systems where known data is to be stored. As it uses a field / record approach, data variables are stored in fields, and each measurement is stored as a record. The intent is to save measurements such as volts in a volt field, temperature in a temp field, etc. Hence, it's not intended for saving video, images, or "random" data. 
+
+<table>
+  <tr>
+    <th>Month</th>
+    <th>Savings</th>
+  </tr>
+  <tr>
+    <td>January</td>
+    <td>$100</td>
+  </tr>
+</table>
 
 under construction
 
