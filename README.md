@@ -42,9 +42,20 @@ If you are not familiar with fields and records, fields are the columns, and rec
   </tr>
 </table>
 
-This driver let's you create fields of specified data types, then in some measurement loop add a new record, save a record, and repeat. As with many flash chips you CANNOT write to an address unless it's in the erased state. This driver will find the next available writable address so if you power up your system, and start saving data, you can be sure you will be writing to valid addresses. 
+This driver let's you create fields of specified data types, then in some measurement loop add a new record, save a record, and repeat. As with many flash chips you CANNOT write to an address unless it's in the erased state. This driver will find the next available writable address so if you power up your system, and start saving data, you can be sure you will be writing to valid addresses. The field definition process passes pointers into the library so the save process simpply looks at the data you already have in memory. This design keeps you from having to save a bunch of fields and the save performance hit and all the calls. Once saveRecord() is all that is needed to save all your data.
 
 Some library highlights are
+
+1. relatively small footprint
+2. very fast write times (50 bytes in 1.6 ms)
+3. ability to add up to 255 fields
+4. ability to add a very special header to store settings such as calibration data.
+5. ability to add a new record
+6. ability to save a record with a single call
+7. ability to goto a record and read fields
+8. ability to get total records and start writing at the end
+9. ability to add a "recordset" field to distinguish one read session from another. This mimics a file.
+10. ability to save byte, int, long, float, char[fixed_lenght], doubles, more... But sorry STRING is not supported. 
 
 Goals
 1. build a fast data storge system that writes to SPI type flash memory chips
