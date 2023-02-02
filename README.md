@@ -79,7 +79,7 @@ This driver let's you create fields of specified data types, then in some measur
 <br>
 1. include the library
 <br>
-include <BulletDB.h>
+#include "BulletDB.h"
 <br>
 <br>
 2. create variables
@@ -93,7 +93,7 @@ uint32_t LastRecord = 0;
 <br>
 3. create data fields
 <br>
- MyVoltsID = SSD.addHeaderField("Volts", &MyVolts);
+MyVoltsID = SSD.addHeaderField("Volts", &MyVolts);
 <br>
 <br>
 4. create the chip object
@@ -104,27 +104,26 @@ BulletDB YOUR_CHIP_OBJECT(THE_CHIP_SELECT_PIN);
 5. In setup, get the last writable record
 <br>
 <br>
- LastRecord = YOUR_CHIP_OBJECT.findLastRecord();
- <br>
- YOUR_CHIP_OBJECT.gotoRecord(LastRecord);
+LastRecord = YOUR_CHIP_OBJECT.findLastRecord();
+<br>
+YOUR_CHIP_OBJECT.gotoRecord(LastRecord);
 <br>
 6. In some measurement loop
 <br>
- MyVolts = analogRead(A0);<br>
+MyVolts = analogRead(A0);<br>
 <br>
 <br>
 7. Add a new record
 <br>
- YOUR_CHIP_OBJECT.addRecord();
- <br>
+YOUR_CHIP_OBJECT.addRecord();
+<br>
 <br>
 8. Save the record
 <br>
- YOUR_CHIP_OBJECT.saveRecord();
- 
-  <br>
+YOUR_CHIP_OBJECT.saveRecord();
 <br>
- 
+<br>
+
  
 <br>
 <br>
