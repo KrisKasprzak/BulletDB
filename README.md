@@ -86,7 +86,7 @@ float MyVolts = 0.0;
 <br>
 int MyVoltsID = 0;
 <br>
-uint32_t LastRecord = 0;
+uint32_t LastRecord = 0, i = 0;
 <br>
 <br>
 3. create data fields
@@ -126,11 +126,16 @@ YOUR_CHIP_OBJECT.saveRecord();
 LastRecord = SSD.getLastRecord();
 <br>
 for (i = 1; i <= LastRecord; i++) {
-<p>&nbsp Serial.print("Record: ");</p>
-<p>&nbsp Serial.print(i);</p>
-<p>&nbsp Serial.print(" - ");</p>
-<p>&nbsp Serial.print(YOUR_CHIP_OBJECT.getField(MyVolts, MyVoltsID )); </p>
-<p>&nbsp Serial.print(", ");
+&nbsp Serial.print("Record: ");
+<br>
+&nbsp Serial.print(i);
+<br>
+&nbsp Serial.print(" - ");
+<br>
+&nbsp Serial.print(YOUR_CHIP_OBJECT.getField(MyVolts, MyVoltsID ));
+<br>
+&nbsp Serial.print(", ");
+<br>
 }
       
 <br>
