@@ -43,7 +43,15 @@ If you are not familiar with fields and records, fields are the columns, and rec
 </table>
 
 This driver let's you create fields of specified data types, then in some measurement loop add a new record, save a record, and repeat. As with many flash chips you CANNOT write to an address unless it's in the erased state. This driver will find the next available writable address so if you power up your system, and start saving data, you can be sure you will be writing to valid addresses. The field definition process passes pointers into the library so the save process simpply looks at the data you already have in memory. This design keeps you from having to save a bunch of fields and the save performance hit and all the calls. Once saveRecord() is all that is needed to save all your data.
+<br>
+<br>
+<b><h2>Goals</b></h2>
+1. build a fast data storge system that writes to SPI type flash memory chips
+2. operate like a database driver, add fields, addrecord, save record, etc
+3. have ability to set a record and read a field for extracting data from the chip to save to an SD card
 
+<br>
+<br>
 Some library highlights are
 
 1. relatively small footprint
@@ -56,11 +64,9 @@ Some library highlights are
 8. ability to get total records and start writing at the end
 9. ability to add a "recordset" field to distinguish one read session from another. This mimics a file.
 10. ability to save byte, int, long, float, char[fixed_lenght], doubles, more... But sorry STRING is not supported. 
+11. ability to get chips stats (JDEC#, and used space)
 
-Goals
-1. build a fast data storge system that writes to SPI type flash memory chips
-2. operate like a database driver, add fields, addrecord, save record, etc
-3. have ability to set a record and read a field for extracting data from the chip to save to an SD card
+
 
 current status
 1. works in basic test case
