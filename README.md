@@ -126,6 +126,7 @@ YOUR_CHIP_OBJECT.saveRecord();
 LastRecord = SSD.getLastRecord();
 <br>
 for (i = 1; i <= LastRecord; i++) {
+<br>
 &nbsp Serial.print("Record: ");
 <br>
 &nbsp Serial.print(i);
@@ -142,8 +143,8 @@ for (i = 1; i <= LastRecord; i++) {
 
 <b><h3>ToDo...</b></h3>
 1. test more
-2. document
-3. update examples (basic usage and how to read data and write to and SD card)
+2. document the examples and code
+3. Add and example on how to read data and write to and SD card)
 5. create YouTube vid in how to use
 6. test with other chips
 7. remove hard code for chip size, pages, etc.
