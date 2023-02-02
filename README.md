@@ -8,6 +8,8 @@ Remember the infamous DBase III? Here it is. A database system for SPI-based fla
 
 This driver is intended for data acquistion systems where known data is to be stored. As it uses a field / record approach, data variables are stored in fields, and each measurement is stored as a record. The intent is to save measurements such as volts in a volt field, temperature in a temp field, etc. Hence, it's not intended for saving video, images, or "random" data. 
 
+If you are not familiar with fields and records, fields are the columns, and records are the rows. Similar to:
+
 <table>
   <tr>
     <th>Record</th>
@@ -40,7 +42,9 @@ This driver is intended for data acquistion systems where known data is to be st
   </tr>
 </table>
 
-under construction
+This driver let's you create fields of specified data types, then in some measurement loop add a new record, save a record, and repeat. As with many flash chips you CANNOT write to an address unless it's in the erased state. This driver will find the next available writable address so if you power up your system, and start saving data, you can be sure you will be writing to valid addresses. 
+
+Some library highlights are
 
 Goals
 1. build a fast data storge system that writes to SPI type flash memory chips
