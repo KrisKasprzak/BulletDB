@@ -105,6 +105,7 @@ BulletDB YOUR_CHIP_OBJECT(THE_CHIP_SELECT_PIN);
 <br>
 <br>
  LastRecord = YOUR_CHIP_OBJECT.findLastRecord();
+ <br>
  YOUR_CHIP_OBJECT.gotoRecord(LastRecord);
 <br>
 6. In some measurement loop
