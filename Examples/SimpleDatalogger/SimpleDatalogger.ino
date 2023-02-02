@@ -79,7 +79,7 @@ void loop() {
     //Serial.println(CharTestData);
 
     unsigned long st = micros();
-    // SSD.addRecord();
+    SSD.addRecord();
     SSD.saveRecord();
     Serial.print(". Save time us ");Serial.println(micros() - st);
 
