@@ -43,16 +43,12 @@ If you are not familiar with fields and records, fields are the columns, and rec
 
 This driver lets you create fields of specified data types, then in some measurement loop add a new record, save a record, and repeat. As with many flash chips you CANNOT write to an address unless it's in the erased state. This driver will find the next available writable address so if you power up your system, and start saving data, you can be sure you will be writing to valid addresses. The field definition process passes pointers into the library so the save process simpply looks at the data you already have in memory. This design keeps you from having to save a bunch of fields and the save performance hit and all the calls. Once saveRecord() is all that is needed to save all your data.
 <br>
-<br>
 <b><h3>Goals</b></h3>
 1. build a fast data storge system that writes to SPI type flash memory chips
 2. operate like a database driver, add fields, addrecord, save record, etc
 3. have ability to set a record and read a field for extracting data from the chip to save to an SD card
-
-<br>
 <br>
 <b><h3>Library highlights</b></h3>
-
 1. relatively small footprint
 2. very fast write times (50 bytes in 1.6 ms)
 3. ability to add up to 255 fields
@@ -65,8 +61,6 @@ This driver lets you create fields of specified data types, then in some measure
 10. ability to save byte, int, long, float, char[fixed_length], doubles, more... But sorry STRING is not supported. 
 11. ability to get chips stats (JDEC#, and used space)
 12. ability to erase a sector or the entire chip
-
-<br>
 <br>
 <b><h3>Library status</b></h3>
 1. works and tested with Winbond W25Q64JVSSIQ
@@ -138,9 +132,7 @@ for (i = 1; i <= LastRecord; i++) {
 &nbsp Serial.print(", ");
 <br>
 }
-      
 <br>
-
 <b><h3>ToDo...</b></h3>
 1. test more
 2. document the examples and code
