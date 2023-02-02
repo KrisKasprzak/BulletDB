@@ -23,38 +23,9 @@
 
 	rev		date			author				change
 	1.0		10/2022			kasprzak			initial code
+	1.1		12/2022			kasprzak			added more methods
+	1.2		1/2023			kasprzak			added addRecord, moved everything to record/field based
 
-
-
-*/
-/*
-to do
-
-1. add methods to set read/write/erase instructions
-2. remove addrecord
-3. clean up some of the get stuff--not srue all are needed
-4. resolve waht is returned an address or record --probably a record
-5. maybe get rid of dumpdata or make private or protected
-6. maybe get rid of address dump or make private
-7. add methods to set the chip size
-8. remove manafest constant to set secot size--since we don't use iter_swap
-9. remove all the manafest constants that are not used
-10. fix the names and such for the wird timing functions
-11. write an example for multi file approach
-12. maybe where we dump all recordsetID and user can print one to screen?
-13. start writing better read me
-1. intent for library
-2. typical use cases
-3. how it works
-4. what it can do
-5. what it can't do
-6. list of methods and explaination
-7. timing graph?
-8. maybe show some serial output code?
-9. definately show a sensor with reads ever 5 ms/ 100 ms/ 500 ms (maybe accelerameter) 
-14. limitations
-15. how to adapt to other chips (read data sheet and get size and instruction codes
-16. test with my other chips
 */
 
 #ifndef BULLETDB_MENU_H
@@ -73,17 +44,19 @@ to do
 
 #include <SPI.h>  
 
-#define BULLET_DB_VER 1.04
+#define BULLET_DB_VER 1.2
 
 #define NULL_RECORD 0xFF
 
 #define MAX_FIELDS 20
 #define MAXCHARLEN 20
 
-#define MAXDATACHARLEN 15
+#define MAXDATACHARLEN 10
 
 // #define CARD_SIZE 520191
-#define CARD_SIZE 8384511
+#define CARD_SIZE 8384511 // 8 388 607 = 8mb
+
+
 #define PAGE_SIZE 4096
 
 #define SPEED_WRITE 25000000
@@ -169,11 +142,9 @@ public:
 	uint8_t addHeaderField(const char *FieldName, float *Data);
 	uint8_t addHeaderField(const char *FieldName, double *Data);
 	
-	int32_t readTotalRecords();
+	uint32_t findLastRecord();
 	
-	int32_t getLastRecord();
-		
-	int32_t gotoLastRecord();
+	uint32_t gotoLastRecord();
 	
 	char *getChipJEDEC();
 		
@@ -183,25 +154,23 @@ public:
 	
 	void gotoRecord(uint32_t Record);
 	
-	void gotoAbsoluteFirstRecord();
-	
-	uint32_t getRecords();
-	
 	uint32_t getCurrentRecord();
 	
-	uint32_t getTotalRecords();
+	uint32_t getLastRecord();
+	
+	uint32_t getMaxRecords();
 	
 	void eraseAll();
 	
-	void dumpBytes(uint8_t RecLen, uint32_t Recs);
+	void dumpBytes();
 
 	void erasePage(uint32_t PageNumber);
 
-	uint32_t addRecord();
+	bool addRecord();
 
-	uint32_t saveRecord();
+	bool saveRecord();
 	
-	uint32_t saveHeader();
+	bool saveHeader();
 
 	void listFields();
 	
@@ -224,7 +193,7 @@ public:
 	uint32_t getUsedSpace();
 	
 	uint32_t getTotalSpace();	
-	
+		
 	uint8_t getField(uint8_t Data, uint8_t Field);
 	int getField(int Data, uint8_t Field);
 	int16_t getField(int16_t Data, uint8_t Field);
@@ -234,7 +203,7 @@ public:
 	float getField(float Record, uint8_t Field);
 	double getField(double Record, uint8_t Field);
 	char *getCharField(uint8_t Field);
-	
+		
 	uint8_t getHeaderField(uint8_t Data, uint8_t Field);
 	int getHeaderField(int Data, uint8_t Field);
 	int16_t getHeaderField(int16_t Data, uint8_t Field);
@@ -245,10 +214,6 @@ public:
 	double getHeaderField(double Record, uint8_t Field);
 	char *getHeaderField(uint8_t Field);
 	char *getCharHeaderField(uint8_t Field);
-	
-	
-	//float getHeaderField(uint8_t Field);
-	//char *getCharHeaderField(uint32_t Record, uint8_t Field);
 		
 private:
 
@@ -256,31 +221,29 @@ private:
 
 	void DebugData(int Line);
 	
-	int16_t readChipJEDEC();
+	bool readChipJEDEC();
 	
 	unsigned long bt = 0;
-	
+	bool RecordAdded = false;
 	bool ReadComplete = false;
 	char stng[MAXDATACHARLEN];
 	uint8_t ReadData();
 	void WriteData(uint8_t data);
 	char ChipJEDEC[9];
-	uint8_t a1Byte;
+	uint8_t a1Byte[1];
 	uint8_t a2Bytes[2];
 	uint8_t a4Bytes[4];
 	uint8_t a8Bytes[8];
 	char dateBytes[8];
 	bool NewCard = false;
+	
 	uint32_t TempAddress = 0;
-	uint32_t UsedAddress = 0;
 	uint32_t Address = 0;
-	uint32_t NextWritableAddress = 0;
-	uint32_t Records = 0;
+	uint32_t MaxRecords = 0;
+	uint32_t LastRecord = 0;
 	uint32_t CurrentRecord = 0;
-	uint32_t TotalRecords = 0;
 	uint32_t i, j;
-	
-	
+		
 	uint8_t FieldCount = 0;
 	uint8_t cspin;
 	uint8_t RecordLength;
@@ -301,8 +264,10 @@ private:
 	double *ddata[MAX_FIELDS];
 	char *cdata[MAX_FIELDS];
 	char buf[MAXDATACHARLEN];
+	uint8_t len = MAXCHARLEN;
+	int8_t bytes[MAXCHARLEN];
 	
-		// header stuff
+	// header stuff
 	uint8_t Header_RecordLength;
 	uint8_t Header_FieldCount = 0;
 	
@@ -332,6 +297,11 @@ private:
 	void B4ToBytes(uint8_t *bytes, uint32_t var);
 	void FloatToBytes(uint8_t *bytes, float var);
 	void DoubleToBytes(uint8_t *bytes, double var);
+	
+	// maybe someday i'll implement this...
+	void saveField(uint8_t Data[], uint8_t Field);
+	
+		
 };
 
 
