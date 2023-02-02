@@ -11,15 +11,25 @@ This driver is intended for data acquistion systems where known data is to be st
 <table>
   <tr>
     <th>Record</th>
-    <th>Volts</th>
+    <th>Time</th>
     <th>Temp1</th>
     <th>Temp2</th>
     <th>Temp2</th>
     
   </tr>
   <tr>
-    <td>January</td>
-    <td>$100</td>
+    <td>1</td>
+    <td>10:00</td>
+    <td>23.4</td>
+    <td>45.2</td>
+    <td>63.1</td>
+  </tr>
+    <tr>
+    <td>1</td>
+    <td>10:01</td>
+    <td>23.6</td>
+    <td>45.1</td>
+    <td>65.4</td>
   </tr>
 </table>
 
