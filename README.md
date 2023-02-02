@@ -41,7 +41,7 @@ If you are not familiar with fields and records, fields are the columns, and rec
   </tr>
 </table>
 
-This driver let's you create fields of specified data types, then in some measurement loop add a new record, save a record, and repeat. As with many flash chips you CANNOT write to an address unless it's in the erased state. This driver will find the next available writable address so if you power up your system, and start saving data, you can be sure you will be writing to valid addresses. The field definition process passes pointers into the library so the save process simpply looks at the data you already have in memory. This design keeps you from having to save a bunch of fields and the save performance hit and all the calls. Once saveRecord() is all that is needed to save all your data.
+This driver lets you create fields of specified data types, then in some measurement loop add a new record, save a record, and repeat. As with many flash chips you CANNOT write to an address unless it's in the erased state. This driver will find the next available writable address so if you power up your system, and start saving data, you can be sure you will be writing to valid addresses. The field definition process passes pointers into the library so the save process simpply looks at the data you already have in memory. This design keeps you from having to save a bunch of fields and the save performance hit and all the calls. Once saveRecord() is all that is needed to save all your data.
 <br>
 <br>
 <b><h3>Goals</b></h3>
@@ -64,6 +64,7 @@ This driver let's you create fields of specified data types, then in some measur
 9. ability to add a "recordset" field to distinguish one read session from another. This mimics a file.
 10. ability to save byte, int, long, float, char[fixed_length], doubles, more... But sorry STRING is not supported. 
 11. ability to get chips stats (JDEC#, and used space)
+12. ability to erase a sector or the entire chip
 
 <br>
 <br>
