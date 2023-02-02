@@ -124,9 +124,18 @@ YOUR_CHIP_OBJECT.saveRecord();
 9. when you are ready to read the data...
 <br>
 LastRecord = SSD.getLastRecord();
+<br>
 for (i = 1; i <= LastRecord; i++) {
-  Serial.print("Record: "); Serial.print(i); Serial.print(" - ");
-  Serial.print(YOUR_CHIP_OBJECT.getField(MyVolts, MyVoltsID )); Serial.print(", ");
+<br>
+  Serial.print("Record: ");
+  <br>
+  Serial.print(i);
+  <br>
+  Serial.print(" - ");
+  <br>
+  Serial.print(YOUR_CHIP_OBJECT.getField(MyVolts, MyVoltsID )); 
+  <br>
+  Serial.print(", ");
 }
       
 <br>
