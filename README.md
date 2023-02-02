@@ -10,8 +10,12 @@ This driver is intended for data acquistion systems where known data is to be st
 
 <table>
   <tr>
-    <th>Month</th>
-    <th>Savings</th>
+    <th>Record</th>
+    <th>Volts</th>
+    <th>Temp1</th>
+    <th>Temp2</th>
+    <th>Temp2</th>
+    
   </tr>
   <tr>
     <td>January</td>
