@@ -2,7 +2,6 @@ DO NOT USE THIS LIBRARY, IT'S UNDER CONSTRUCTION AND METHODS AND SUCH ARE CHANIN
 
 ALMOST DONE....
 
-
 # BulletDB
 Remember the infamous DBase III? Here it is. A database system for SPI-based flash memory chips intended for microcontrollers like the mighty Teensy. This database driver uses a field/record approach in saving data to a chip. While you can save data to and SD card, the classic open/write/save has a huge overhead the can take in the 100's if ms to execute. This driver can save ~50 bytes in around 2ms. Data on the chip can be downloaded to and SD card for portable transfer to a PC. 
 
@@ -45,7 +44,7 @@ If you are not familiar with fields and records, fields are the columns, and rec
 This driver let's you create fields of specified data types, then in some measurement loop add a new record, save a record, and repeat. As with many flash chips you CANNOT write to an address unless it's in the erased state. This driver will find the next available writable address so if you power up your system, and start saving data, you can be sure you will be writing to valid addresses. The field definition process passes pointers into the library so the save process simpply looks at the data you already have in memory. This design keeps you from having to save a bunch of fields and the save performance hit and all the calls. Once saveRecord() is all that is needed to save all your data.
 <br>
 <br>
-<b><h2>Goals</b></h2>
+<b><h1>Goals</b></h1>
 1. build a fast data storge system that writes to SPI type flash memory chips
 2. operate like a database driver, add fields, addrecord, save record, etc
 3. have ability to set a record and read a field for extracting data from the chip to save to an SD card
