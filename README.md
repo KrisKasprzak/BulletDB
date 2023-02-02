@@ -133,6 +133,7 @@ for (i = 1; i <= LastRecord; i++) {
 <br>
 }
 <br>
+
 <b><h3>ToDo...</b></h3>
 1. test more
 2. document the examples and code
@@ -140,3 +141,4 @@ for (i = 1; i <= LastRecord; i++) {
 5. create YouTube vid in how to use
 6. test with other chips
 7. remove hard code for chip size, pages, etc.
+
