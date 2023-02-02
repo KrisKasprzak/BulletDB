@@ -3,7 +3,7 @@ DO NOT USE THIS LIBRARY, IT'S UNDER CONSTRUCTION AND METHODS AND SUCH ARE CHANIN
 ALMOST DONE....
 
 # BulletDB
-Remember the infamous DBase III? Here it is. A database system for SPI-based flash memory chips intended for microcontrollers like the mighty Teensy. This database driver uses a field/record approach in saving data to a chip. While you can save data to and SD card, the classic open/write/save has a huge overhead the can take in the 100's if ms to execute. This driver can save ~50 bytes in around 2ms. Data on the chip can be downloaded to and SD card for portable transfer to a PC. 
+Remember the infamous DBase III? Here it is for your MCU's. This library is a database system for SPI-based flash memory chips intended for microcontrollers like the mighty Teensy. This database driver uses a field/record approach in saving data to a chip. While you can save data to and SD card, the classic open/write/save has a huge overhead the can take in the 100's if ms to execute. This driver can save ~50 bytes in around 2ms. Data on the chip can be downloaded to and SD card for portable transfer to a PC. 
 
 This driver is intended for data acquistion systems where known data is to be stored. As it uses a field / record approach, data variables are stored in fields, and each measurement is stored as a record. The intent is to save measurements such as volts in a volt field, temperature in a temp field, etc. Hence, it's not intended for saving video, images, or "random" data. 
 
@@ -62,7 +62,7 @@ This driver let's you create fields of specified data types, then in some measur
 7. ability to goto a record and read fields
 8. ability to get total records and start writing at the end
 9. ability to add a "recordset" field to distinguish one read session from another. This mimics a file.
-10. ability to save byte, int, long, float, char[fixed_lenght], doubles, more... But sorry STRING is not supported. 
+10. ability to save byte, int, long, float, char[fixed_length], doubles, more... But sorry STRING is not supported. 
 11. ability to get chips stats (JDEC#, and used space)
 
 <br>
@@ -72,11 +72,27 @@ This driver let's you create fields of specified data types, then in some measur
 2. can write ~50 bytes in 1.5 ms
 3. tested by writing 4mb and zero loss of data
 
+<br>
+<br>
+<b><h3>General implementation</b></h3>
+1. include the library
+<br>
+#include <BulletDB.h>
+<br>
+2. create variables
+<br>
+float MyVolts = 0.0;
+<br>
+int MyVoltsID = 0;
+<br>
+3. create data fields
+<br>
+ MyVoltsID = SSD.addHeaderField("Volts", &MyVolts);
 
 to do
 1. test more
 2. document
-3. update examples
+3. update examples (basic usage and how to read data and write to and SD card)
 5. create YouTube vid in how to use
 6. test with other chips
 7. remove hard code for chip size, pages, etc.
