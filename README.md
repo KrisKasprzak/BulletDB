@@ -127,15 +127,15 @@ LastRecord = SSD.getLastRecord();
 <br>
 for (i = 1; i <= LastRecord; i++) {
 <br>
-<tb>Serial.print("Record: ");
+<p>Serial.print("Record: ");</p>
 <br>
-Serial.print(i);
+<p>Serial.print(i);</p>
 <br>
-Serial.print(" - ");
+<p>Serial.print(" - ");</p>
 <br>
-Serial.print(YOUR_CHIP_OBJECT.getField(MyVolts, MyVoltsID )); 
+<p>Serial.print(YOUR_CHIP_OBJECT.getField(MyVolts, MyVoltsID )); </p>
 <br>
-Serial.print(", ");
+<p>Serial.print(", ");
 <br>
 }
       
