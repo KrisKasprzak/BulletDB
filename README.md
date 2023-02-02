@@ -24,12 +24,19 @@ This driver is intended for data acquistion systems where known data is to be st
     <td>45.2</td>
     <td>63.1</td>
   </tr>
-    <tr>
-    <td>1</td>
+  <tr>
+    <td>2</td>
     <td>10:01</td>
     <td>23.6</td>
     <td>45.1</td>
     <td>65.4</td>
+  </tr>
+    <tr>
+    <td>3</td>
+    <td>10:02</td>
+    <td>23.7</td>
+    <td>45.0</td>
+    <td>67.2</td>
   </tr>
 </table>
 
