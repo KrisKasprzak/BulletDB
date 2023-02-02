@@ -108,6 +108,7 @@ LastRecord = YOUR_CHIP_OBJECT.findLastRecord();
 <br>
 YOUR_CHIP_OBJECT.gotoRecord(LastRecord);
 <br>
+<br>
 6. In some measurement loop
 <br>
 MyVolts = analogRead(A0);<br>
@@ -124,9 +125,6 @@ YOUR_CHIP_OBJECT.saveRecord();
 <br>
 <br>
 
- 
-<br>
-<br>
 <b><h3>ToDo...</b></h3>
 1. test more
 2. document
