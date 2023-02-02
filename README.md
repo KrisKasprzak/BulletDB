@@ -51,7 +51,7 @@ This driver let's you create fields of specified data types, then in some measur
 
 <br>
 <br>
-Some library highlights are
+<b><h3>Library highlights</b></h3>
 
 1. relatively small footprint
 2. very fast write times (50 bytes in 1.6 ms)
@@ -65,19 +65,18 @@ Some library highlights are
 10. ability to save byte, int, long, float, char[fixed_lenght], doubles, more... But sorry STRING is not supported. 
 11. ability to get chips stats (JDEC#, and used space)
 
-
-
-current status
-1. works in basic test case
-2. can write 58 bytes in 1.6 ms
-3. add fields, save data, loop through records and save to SD
+<br>
+<br>
+<b><h3>Library status</b></h3>
+1. works and tested with Winbond W25Q64JVSSIQ
+2. can write ~50 bytes in 1.5 ms
+3. tested by writing 4mb and zero loss of data
 
 
 to do
-1. test
+1. test more
 2. document
-3. remove some debug and test code
-4. write examples
+3. update examples
 5. create YouTube vid in how to use
 6. test with other chips
 7. remove hard code for chip size, pages, etc.
