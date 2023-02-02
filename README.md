@@ -71,8 +71,6 @@ This driver let's you create fields of specified data types, then in some measur
 1. works and tested with Winbond W25Q64JVSSIQ
 2. can write ~50 bytes in 1.5 ms
 3. tested by writing 4mb and zero loss of data
-
-<br>
 <br>
 <b><h3>General implementation</b></h3>
 <br>
@@ -110,7 +108,7 @@ YOUR_CHIP_OBJECT.gotoRecord(LastRecord);
 <br>
 6. In some measurement loop
 <br>
-MyVolts = analogRead(A0);<br>
+MyVolts = analogRead(A0);
 <br>
 <br>
 7. Add a new record
@@ -122,6 +120,15 @@ YOUR_CHIP_OBJECT.addRecord();
 <br>
 YOUR_CHIP_OBJECT.saveRecord();
 <br>
+<br>
+9. when you are ready to read the data...
+<br>
+LastRecord = SSD.getLastRecord();
+for (i = 1; i <= LastRecord; i++) {
+  Serial.print("Record: "); Serial.print(i); Serial.print(" - ");
+  Serial.print(YOUR_CHIP_OBJECT.getField(MyVolts, MyVoltsID )); Serial.print(", ");
+}
+      
 <br>
 
 <b><h3>ToDo...</b></h3>
