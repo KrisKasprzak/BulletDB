@@ -74,7 +74,6 @@ This driver let's you create fields of specified data types, then in some measur
 <br>
 <b><h3>General implementation</b></h3>
 <br>
-<br>
 1. include the library
 <br>
 #include "BulletDB.h"
