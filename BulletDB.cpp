@@ -22,7 +22,10 @@
   and make millions of dollars, I'm happy for you!
 
   rev   date      author        change
-  1.0   10/2022      kasprzak      initial code
+	1.0		10/2022			kasprzak			initial code
+	1.1		12/2022			kasprzak			added more methods
+	1.2		1/2023			kasprzak			added addRecord, moved everything to record/field based
+	1.4		10/2023			kasprzak			added getFirstRecord for going to first record in a recordset
 
 */
 
@@ -231,7 +234,7 @@ uint32_t BulletDB::findLastRecord(){
 	LastRecord = MiddleRecord;
 	CurrentRecord = MiddleRecord;
 	
-DebugData(199);
+// DebugData(199);
 
 	//Serial.print("RecordLength ");Serial.println(RecordLength );
 	//Serial.print("LastRecord ");Serial.println(LastRecord );
@@ -239,6 +242,119 @@ DebugData(199);
 		
 	return LastRecord;
 	
+}
+
+
+uint32_t BulletDB::getFirstRecord(uint8_t FieldID, uint16_t TargetData){
+	
+	uint32_t StartRecord = 0;
+	uint32_t MiddleRecord = 0;
+	uint32_t EndRecord = 0;
+	bool Found = false;
+	uint32_t Iteration = 0;
+	uint16_t DataCR = 0, DataPR = 0;
+	
+	
+	//Serial.print("Searching field ");Serial.print(FieldID);
+	//Serial.print(", field name ");Serial.print(getFieldName(FieldID));
+	//Serial.print(", for first instance of data ");Serial.println(TargetData);
+
+	// test first record
+	// if the first record is target record, we found it and were done
+	// Address = 1 * RecordLength;
+	gotoRecord(1);
+	DataCR = getField(DataCR, FieldID);
+
+	if (DataCR == TargetData){
+		return 1;
+	}
+		
+	// test last record, if target is > last record, record does not exist
+	gotoRecord(getLastRecord());
+	DataCR = getField(DataCR, FieldID);
+	gotoRecord(MiddleRecord-1);
+	DataPR = getField(DataPR, FieldID);
+	if (TargetData > DataCR){
+		return 0;
+	}
+	
+	if ((DataCR == TargetData) && (DataPR == (TargetData - 1))){
+		return getLastRecord();
+	}
+	
+	// begin the bisectional seek to get the last valid record 
+	// (where record start address is not 0xFFFF and next record IS 0xFFFF)
+	StartRecord = 1;
+	EndRecord = LastRecord;
+	
+	// OK last record is somewhere in between...
+	while(!Found) {
+		
+		Iteration++;
+		
+		MiddleRecord = (EndRecord + StartRecord) / 2;
+		
+		gotoRecord(MiddleRecord);
+		DataCR = getField(DataCR, FieldID);
+		gotoRecord(MiddleRecord-1);
+		DataPR = getField(DataPR, FieldID);
+		/*
+		Serial.print("Iteration ");
+		Serial.print(Iteration);
+		Serial.print(", MiddleRecord ");
+		Serial.print(MiddleRecord);
+		Serial.print(", TargetData ");
+		Serial.print(TargetData);
+		Serial.print(", DataCR ");
+		Serial.print(DataCR);
+		Serial.print(", DataPR ");
+		Serial.print(DataPR);
+		Serial.print(", Decision: ");
+		*/
+		if ((DataCR == TargetData) && (DataPR == (TargetData - 1))){
+			// we found it...
+			//Serial.println("311 ------Data found ");
+			Found = true;
+			return MiddleRecord;
+		}
+		if (Iteration > 50) { // 23 bits is max iteration for 23 bit for this chip, 1 more for good luck
+			//Serial.println("317 -----iteration issue ");
+			NewCard = true;
+			CurrentRecord = 0;
+			EndRecord = 0;
+			ReadComplete = true;
+			return CHIP_FORCE_RESTART;
+		}
+		
+		// determine if we search upper half or lower half
+		if ((DataCR == NULL_RECORD) && (DataPR == NULL_RECORD)){
+			//Serial.println("327 -----Data must be in lower half ");
+			EndRecord = MiddleRecord;
+		}	
+		// data in upper half
+		else if (DataCR < TargetData){
+			//Serial.println("332 ------Data must be in upper half ");
+			StartRecord = MiddleRecord;
+		}
+		
+		// data in lower half
+		else if (DataCR > TargetData){
+			//Serial.println("338 -----Data must be in lower half ");
+			EndRecord = MiddleRecord;
+		}
+		// data in lower half
+		else if ((DataCR == TargetData) && (DataCR == TargetData)) {
+			//Serial.println("344 -----Data must be in lower half ");
+			EndRecord = MiddleRecord;
+		}
+		else {
+			Serial.println("Line 348 in BulletDB.cpp, Missing Search Case.");
+		}
+
+			
+	}
+	return MiddleRecord;
+
 }
 
 // data field addField methods
@@ -693,7 +809,7 @@ void BulletDB::dumpBytes() {
 	uint32_t TempRecord = 0;
 	uint8_t data = 0;
 	uint32_t InvalidRecords = 0;
-	uint32_t Record = 0;
+
 	TempRecord = CurrentRecord;
 	
 	CurrentRecord = 0;
@@ -702,7 +818,7 @@ void BulletDB::dumpBytes() {
 	// keeping dumping memory until we get 0xFFFF too many times
 	// this will account for any skips (assuming don't have more than 100 skipped records)
 	
-	while (InvalidRecords < 5000){
+	while (InvalidRecords < 1000){
 		
 		Address = CurrentRecord * RecordLength;
 		
@@ -1241,6 +1357,9 @@ unsigned char BulletDB::flash_read_status(void)
 }
 
 uint8_t BulletDB::ReadData() {
+	
+	//Serial.print(" ReadData::Address ");
+	//Serial.println(Address);
 	
 	
   SPI.beginTransaction(SPISettings(SPEED_READ, MSBFIRST, SPI_MODE0));
