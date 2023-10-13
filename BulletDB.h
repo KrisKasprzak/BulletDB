@@ -25,6 +25,7 @@
 	1.0		10/2022			kasprzak			initial code
 	1.1		12/2022			kasprzak			added more methods
 	1.2		1/2023			kasprzak			added addRecord, moved everything to record/field based
+	1.4		10/2023			kasprzak			added getFirstRecord for going to first record in a recordset
 
 */
 
@@ -44,11 +45,11 @@
 
 #include <SPI.h>  
 
-#define BULLET_DB_VER 1.2
+#define BULLET_DB_VER 1.4
 
 #define NULL_RECORD 0xFF
 
-#define MAX_FIELDS 20
+#define MAX_FIELDS 25
 #define MAXCHARLEN 20
 
 #define MAXDATACHARLEN 10
@@ -154,6 +155,8 @@ public:
 	
 	void gotoRecord(uint32_t Record);
 	
+	uint32_t getFirstRecord(uint8_t FieldID, uint16_t Data);
+		
 	uint32_t getCurrentRecord();
 	
 	uint32_t getLastRecord();
@@ -229,7 +232,7 @@ private:
 	char stng[MAXDATACHARLEN];
 	uint8_t ReadData();
 	void WriteData(uint8_t data);
-	char ChipJEDEC[9];
+	char ChipJEDEC[15];
 	uint8_t a1Byte[1];
 	uint8_t a2Bytes[2];
 	uint8_t a4Bytes[4];
