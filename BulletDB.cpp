@@ -26,6 +26,7 @@
 	1.1		12/2022			kasprzak			added more methods
 	1.2		1/2023			kasprzak			added addRecord, moved everything to record/field based
 	1.4		10/2023			kasprzak			added getFirstRecord for going to first record in a recordset
+ 	1.5		11/2023			kasprzak			made arguement list for getFirstRecord consistent with getField
 
 */
 
@@ -245,7 +246,7 @@ uint32_t BulletDB::findLastRecord(){
 }
 
 
-uint32_t BulletDB::getFirstRecord(uint8_t FieldID, uint16_t TargetData){
+uint32_t BulletDB::getFirstRecord( uint16_t TargetData, uint8_t FieldID){
 	
 	uint32_t StartRecord = 0;
 	uint32_t MiddleRecord = 0;
@@ -809,10 +810,13 @@ void BulletDB::dumpBytes() {
 	uint32_t TempRecord = 0;
 	uint8_t data = 0;
 	uint32_t InvalidRecords = 0;
-
+	uint32_t MaxRecords = 0;
+	
 	TempRecord = CurrentRecord;
 	
-	CurrentRecord = 0;
+	CurrentRecord = 11388;
+	MaxRecords = CurrentRecord + 100;
+	
 	Serial.println("Dump bytes-------------------- "); 
 	
 	// keeping dumping memory until we get 0xFFFF too many times
@@ -836,10 +840,10 @@ void BulletDB::dumpBytes() {
 		}
 		Serial.println("");
 		
-//		if (CurrentRecord >= MaxRecords) {
-//			gotoRecord(TempRecord);
-//			return;
-//		}
+		if (CurrentRecord >= MaxRecords) {
+			gotoRecord(TempRecord);
+			return;
+		}
 		
 		CurrentRecord++;
 
