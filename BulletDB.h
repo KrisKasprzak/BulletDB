@@ -26,6 +26,7 @@
 	1.1		12/2022			kasprzak			added more methods
 	1.2		1/2023			kasprzak			added addRecord, moved everything to record/field based
 	1.4		10/2023			kasprzak			added getFirstRecord for going to first record in a recordset
+	1.5		11/2023			kasprzak			made arguement list for getFirstRecord consistent with getField
 
 */
 
@@ -45,7 +46,7 @@
 
 #include <SPI.h>  
 
-#define BULLET_DB_VER 1.4
+#define BULLET_DB_VER 1.5
 
 #define NULL_RECORD 0xFF
 
@@ -155,7 +156,7 @@ public:
 	
 	void gotoRecord(uint32_t Record);
 	
-	uint32_t getFirstRecord(uint8_t FieldID, uint16_t Data);
+	uint32_t getFirstRecord(uint16_t Data, uint8_t FieldID);
 		
 	uint32_t getCurrentRecord();
 	
