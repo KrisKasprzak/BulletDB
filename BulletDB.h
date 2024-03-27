@@ -27,6 +27,7 @@
 	1.2		1/2023			kasprzak			added addRecord, moved everything to record/field based
 	1.4		10/2023			kasprzak			added getFirstRecord for going to first record in a recordset
 	1.5		11/2023			kasprzak			made arguement list for getFirstRecord consistent with getField
+	1.6		03/2024			kasprzak			fixed getfield for doubles
 
 */
 
@@ -37,7 +38,7 @@
 	 #include "Arduino.h"
 	 #include "Print.h"
 #else
-	
+
 #endif
 
 #ifdef __cplusplus
@@ -46,7 +47,7 @@
 
 #include <SPI.h>  
 
-#define BULLET_DB_VER 1.5
+#define BULLET_DB_VER 1.6
 
 #define NULL_RECORD 0xFF
 
@@ -111,6 +112,7 @@
 #define WRITEENABLE   0x06
 #define WRITE         0x02
 #define READ          0x03
+// #define READ     0x0B (make sure you add 8 bit dummy write after sending address
 #define RID           0xAB
 #define JEDEC         0x9F
 #define CHIPERASE     0x60
@@ -307,7 +309,5 @@ private:
 	
 		
 };
-
-
 
 #endif
