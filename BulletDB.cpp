@@ -26,8 +26,7 @@
 	1.1		12/2022			kasprzak			added more methods
 	1.2		1/2023			kasprzak			added addRecord, moved everything to record/field based
 	1.4		10/2023			kasprzak			added getFirstRecord for going to first record in a recordset
- 	1.5		11/2023			kasprzak			made arguement list for getFirstRecord consistent with getField
-
+	1.5		11/2023			kasprzak			made arguement list for getFirstRecord consistent with getField
 */
 
 #include "SPI.h"
@@ -592,17 +591,22 @@ uint8_t BulletDB::addHeaderField(const char *HeaderFieldName, float *Data) {
 }
 
 uint8_t BulletDB::addHeaderField(const char *HeaderFieldName, double *Data) {
+	
+	
+	
 	if (Header_RecordLength + sizeof(*Data) >= RecordLength){
+		
 		return 0;
 	}
-	Header_DataType[Header_FieldCount] = DT_FLOAT;
+		
+	Header_DataType[Header_FieldCount] = DT_DOUBLE;
 	Header_FieldStart[Header_FieldCount] = Header_RecordLength;
 	Header_FieldLength[Header_FieldCount] =  sizeof(*Data);
 	Header_RecordLength = Header_RecordLength + sizeof(*Data);
 	strcpy(Header_FieldName[Header_FieldCount], HeaderFieldName);
-	dhdata[Header_FieldCount] = Data;
+	dhdata[Header_FieldCount] = Data;	
 	Header_FieldCount++;
-	
+		
 	return Header_FieldCount - 1;
 		
 }
@@ -658,15 +662,17 @@ void BulletDB::listFields() {
 void BulletDB::listHeaderFields() {
 
 	for (i = 0; i < Header_FieldCount; i++){
+				
 		Serial.print("Number: ");
 		Serial.print(i);
 		Serial.print(", Name: ");
 		Serial.print(Header_FieldName[i]);
 		Serial.print(", type: ");
-		if( DataType[i] == DT_U8){
+		
+		if( Header_DataType[i] == DT_U8){
 			Serial.print("uint8_t");
 		}
-		else if( DataType[i] == DT_INT){
+		else if( Header_DataType[i] == DT_INT){
 			Serial.print("int");
 		}
 		else if( Header_DataType[i] == DT_I16){
@@ -695,7 +701,9 @@ void BulletDB::listHeaderFields() {
 			
 	}
 	
-	Serial.print("Record length: ");Serial.println(RecordLength);
+	Serial.print("Header Record length: ");Serial.println(Header_RecordLength);
+	Serial.print("Header field count: ");Serial.println(Header_FieldCount);
+	
 }
 
 uint32_t BulletDB::gotoLastRecord(){
@@ -788,7 +796,7 @@ bool BulletDB::addRecord(){
 	
 	if (CurrentRecord >= MaxRecords) {
 		RecordAdded = false;
-		Serial.println("addRecord failed");
+		//Serial.println("addRecord failed");
 		return false;
 	}
 	
@@ -814,8 +822,8 @@ void BulletDB::dumpBytes() {
 	
 	TempRecord = CurrentRecord;
 	
-	CurrentRecord = 11388;
-	MaxRecords = CurrentRecord + 100;
+	CurrentRecord = 1;
+	MaxRecords = CurrentRecord + 500;
 	
 	Serial.println("Dump bytes-------------------- "); 
 	
@@ -866,15 +874,13 @@ bool BulletDB::saveRecord() {
 	// DebugData(728);
 	for (i= 0; i < FieldCount; i++){
 		
-		
 		Address = (CurrentRecord * RecordLength) + FieldStart[i];
-		
 		
 		if (DataType[i] == DT_U8){
 			WriteData(*u8data[i]);
 		}
 		else if (DataType[i] == DT_INT){			
-			B4ToBytes(a4Bytes, *i16data[i]);
+			B4ToBytes(a4Bytes, *intdata[i]);
 			WriteData(a4Bytes[0]);
 			WriteData(a4Bytes[1]);
 			WriteData(a4Bytes[2]);
@@ -890,18 +896,14 @@ bool BulletDB::saveRecord() {
 			WriteData(a2Bytes[0]);
 			WriteData(a2Bytes[1]);
 		}
-		else if (DataType[i] == DT_I32){
-			
-			//Serial.print(i); Serial.print(" , "); Serial.println(*i32data[i]);
+		else if (DataType[i] == DT_I32){			
 			B4ToBytes(a4Bytes, *i32data[i]);
 			WriteData(a4Bytes[0]);
 			WriteData(a4Bytes[1]);
 			WriteData(a4Bytes[2]);
 			WriteData(a4Bytes[3]);
 		}
-		else if (DataType[i] == DT_U32){
-			//Serial.print(i); Serial.print(" , "); Serial.println(*u32data[i]);
-			
+		else if (DataType[i] == DT_U32){	
 			B4ToBytes(a4Bytes, *u32data[i]);
 			WriteData(a4Bytes[0]);
 			WriteData(a4Bytes[1]);
@@ -918,6 +920,8 @@ bool BulletDB::saveRecord() {
 		}	
 		else if (DataType[i] == DT_DOUBLE){		
 			DoubleToBytes(a8Bytes, *ddata[i]);
+			
+
 			WriteData(a8Bytes[0]);
 			WriteData(a8Bytes[1]);
 			WriteData(a8Bytes[2]);
@@ -931,19 +935,12 @@ bool BulletDB::saveRecord() {
 		else if (DataType[i] == DT_CHAR){
 				
 			strcpy(buf,cdata[i]);
-			// Serial.print("Printing char record: ");
 			for (j = 0; j < MAXDATACHARLEN; j ++){
-				WriteData(buf[j]);	
-				// Serial.print(buf[j]);				
+				WriteData(buf[j]);				
 			}		
-			// Serial.println("");
 		}
 			
 	}
-
-	// DebugData(865);
-	// no real checking
-	// todo read recs and make sure???
 	RecordAdded = false;
 	return true;
 	
@@ -1147,25 +1144,40 @@ uint32_t BulletDB::getField(uint32_t Data, uint8_t Field){
 }
 
 float BulletDB::getField(float Data, uint8_t Field){
-
+	float a;
 	Address = (CurrentRecord * RecordLength) + FieldStart[Field];
 	a4Bytes[0] = ReadData();
 	a4Bytes[1] = ReadData();
 	a4Bytes[2] = ReadData();
 	a4Bytes[3] = ReadData();	
 	
-	return *(float *)a4Bytes;
+	memcpy(&a, a4Bytes, sizeof(float));
+	
+	return a;
+	
+	// return *(float *)a4Bytes;
 }
 
 double BulletDB::getField(double Data, uint8_t Field){
 
-	Address = (CurrentRecord * RecordLength) + FieldStart[Field];
-	a4Bytes[0] = ReadData();
-	a4Bytes[1] = ReadData();
-	a4Bytes[2] = ReadData();
-	a4Bytes[3] = ReadData();	
+	double a;
 
-	return *(double *)a4Bytes;
+	Address = (CurrentRecord * RecordLength) + FieldStart[Field];
+		
+	a8Bytes[0] = ReadData();
+	a8Bytes[1] = ReadData();
+	a8Bytes[2] = ReadData();
+	a8Bytes[3] = ReadData();	
+	a8Bytes[4] = ReadData();
+	a8Bytes[5] = ReadData();
+	a8Bytes[6] = ReadData();
+	a8Bytes[7] = ReadData();	
+
+	memcpy(&a, a8Bytes, sizeof(double));
+
+	return a;
+	
+	// return *( (double *) (a8Bytes));
 }
 
 char  *BulletDB::getCharField(uint8_t Field){
@@ -1272,14 +1284,23 @@ float BulletDB::getHeaderField(float Data, uint8_t Field){
 
 double BulletDB::getHeaderField(double Data, uint8_t Field){
 
+	double a;
+
 	Address = (CurrentRecord * RecordLength) + Header_FieldStart[Field];
 
-	a4Bytes[0] = ReadData();
-	a4Bytes[1] = ReadData();
-	a4Bytes[2] = ReadData();
-	a4Bytes[3] = ReadData();	
+	a8Bytes[0] = ReadData();
+	a8Bytes[1] = ReadData();
+	a8Bytes[2] = ReadData();
+	a8Bytes[3] = ReadData();	
+	a8Bytes[4] = ReadData();
+	a8Bytes[5] = ReadData();
+	a8Bytes[6] = ReadData();
+	a8Bytes[7] = ReadData();	
+	
+	memcpy(&a, a8Bytes, sizeof(double));
 
-	return *(double *)a4Bytes;
+	return a;
+	// return *(double *)a8Bytes;
 }
 
 char  *BulletDB::getCharHeaderField(uint8_t Field){
@@ -1372,6 +1393,7 @@ uint8_t BulletDB::ReadData() {
   SPI.transfer((uint8_t) ((Address >> 16) & 0xFF));
   SPI.transfer((uint8_t) ((Address >> 8) & 0xFF));
   SPI.transfer((uint8_t) (Address & 0xFF));
+  // SPI.transfer((uint8_t) (0b11111111)); needed for fast read
   readvalue = SPI.transfer(0x00);
    
   digitalWrite(cspin, HIGH); 
