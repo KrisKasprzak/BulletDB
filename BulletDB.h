@@ -28,6 +28,7 @@
 	1.4		10/2023			kasprzak			added getFirstRecord for going to first record in a recordset
 	1.5		11/2023			kasprzak			made arguement list for getFirstRecord consistent with getField
 	1.6		03/2024			kasprzak			fixed getfield for doubles
+	1.8		01/2025			kasprzak			added ability to getDataBaseRecordSize and private put
 
 */
 
@@ -38,7 +39,7 @@
 	 #include "Arduino.h"
 	 #include "Print.h"
 #else
-
+	
 #endif
 
 #ifdef __cplusplus
@@ -47,11 +48,11 @@
 
 #include <SPI.h>  
 
-#define BULLET_DB_VER 1.6
+#define BULLET_DB_VER 1.8
 
 #define NULL_RECORD 0xFF
 
-#define MAX_FIELDS 25
+#define MAX_FIELDS 50
 #define MAXCHARLEN 20
 
 #define MAXDATACHARLEN 10
@@ -108,11 +109,12 @@
 #define CMD_RELEASE_POWER_DOWN 0xAB//not tested
 #define CMD_POWER_DOWN         0xB9//not tested
 */
-#define CMD_BLOCK64K_ERASE     0xD8//not tested
+
+#define CMD_BLOCK64K_ERASE     0xD8 //not tested
 #define WRITEENABLE   0x06
 #define WRITE         0x02
 #define READ          0x03
-// #define READ     0x0B (make sure you add 8 bit dummy write after sending address
+#define READ_FAST     0x0B // (make sure you add 8 bit dummy write after sending address
 #define RID           0xAB
 #define JEDEC         0x9F
 #define CHIPERASE     0x60
@@ -127,26 +129,28 @@ public:
 	
 	bool init();
 	
-	uint8_t addField(const char *FieldName, uint8_t *Data);	
-	uint8_t addField(const char *FieldName, int *Data);
-	uint8_t addField(const char *FieldName, int16_t *Data);
-	uint8_t addField(const char *FieldName, uint16_t *Data);
-	uint8_t addField(const char *FieldName, uint32_t *Data);
-	uint8_t addField(const char *FieldName, int32_t *Data);
-	uint8_t addField(const char *FieldName, float *Data);
-	uint8_t addField(const char *FieldName, double *Data);
-	uint8_t addField(const char *FieldName, char  *Data, uint8_t len);
+	uint8_t addField(uint8_t *Data);	
+	uint8_t addField(int *Data);
+	uint8_t addField(int16_t *Data);
+	uint8_t addField(uint16_t *Data);
+	uint8_t addField(uint32_t *Data);
+	uint8_t addField(int32_t *Data);
+	uint8_t addField(float *Data);
+	uint8_t addField(double *Data);
+	uint8_t addField(char  *Data, uint8_t len);
 	
-	uint8_t addHeaderField(const char *FieldName, uint8_t *Data);
-	uint8_t addHeaderField(const char *FieldName, int *Data);
-	uint8_t addHeaderField(const char *FieldName, int16_t *Data);
-	uint8_t addHeaderField(const char *FieldName, uint16_t *Data);
-	uint8_t addHeaderField(const char *FieldName, uint32_t *Data);
-	uint8_t addHeaderField(const char *FieldName, int32_t *Data);
-	uint8_t addHeaderField(const char *FieldName, float *Data);
-	uint8_t addHeaderField(const char *FieldName, double *Data);
+	uint8_t addHeaderField(uint8_t *Data);
+	uint8_t addHeaderField(int *Data);
+	uint8_t addHeaderField(int16_t *Data);
+	uint8_t addHeaderField(uint16_t *Data);
+	uint8_t addHeaderField(uint32_t *Data);
+	uint8_t addHeaderField(int32_t *Data);
+	uint8_t addHeaderField(float *Data);
+	uint8_t addHeaderField(double *Data);
 	
 	uint32_t findLastRecord();
+	
+	uint8_t getDatabaseRecordLength();
 	
 	uint32_t gotoLastRecord();
 	
@@ -165,10 +169,10 @@ public:
 	uint32_t getLastRecord();
 	
 	uint32_t getMaxRecords();
-	
+		
 	void eraseAll();
 	
-	void dumpBytes();
+	void dumpBytes(uint32_t StartRecord, uint32_t TotalRecords);
 
 	void erasePage(uint32_t PageNumber);
 
@@ -188,10 +192,6 @@ public:
 	
 	uint8_t getFieldDataType(uint8_t Index);
 
-	char * getFieldName(uint8_t Index);
-	
-	char * getHeaderFieldName(uint8_t Index);
-	
 	uint16_t getRecordLength();
 
 	uint16_t getHeaderRecordLength();
@@ -242,23 +242,22 @@ private:
 	uint8_t a8Bytes[8];
 	char dateBytes[8];
 	bool NewCard = false;
-	
+	uint8_t ReadSpeed = 0;
 	uint32_t TempAddress = 0;
 	uint32_t Address = 0;
 	uint32_t MaxRecords = 0;
 	uint32_t LastRecord = 0;
 	uint32_t CurrentRecord = 0;
-	uint32_t i, j;
+	uint32_t i= 0, j= 0;
 		
 	uint8_t FieldCount = 0;
-	uint8_t cspin;
-	uint8_t RecordLength;
-	int16_t pagesize;
+	uint8_t cspin = 0;
+	uint8_t RecordLength= 0, DataBaseRecordLength= 0;
+	int16_t pagesize= 0;
 
 	uint8_t DataType[MAX_FIELDS];
 	uint8_t FieldStart[MAX_FIELDS];
 	uint8_t FieldLength[MAX_FIELDS];
-	char fieldname[MAX_FIELDS][MAXCHARLEN];
 		
 	uint8_t *u8data[MAX_FIELDS];
 	int *intdata[MAX_FIELDS];
@@ -280,7 +279,6 @@ private:
 	uint8_t Header_DataType[MAX_FIELDS];
 	uint8_t Header_FieldStart[MAX_FIELDS];
 	uint8_t Header_FieldLength[MAX_FIELDS];
-	char Header_FieldName[MAX_FIELDS][MAXCHARLEN];
 	
 	uint8_t 	*u8hdata[MAX_FIELDS];
 	int 		*inthdata[MAX_FIELDS];
@@ -307,7 +305,12 @@ private:
 	// maybe someday i'll implement this...
 	void saveField(uint8_t Data[], uint8_t Field);
 	
+	// method to put the recordlengh to address 0
+	void putDatabaseRecordLength();
+	
 		
 };
+
+
 
 #endif
