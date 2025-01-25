@@ -21,12 +21,7 @@
   On a personal note, if you develop an application or product using this library
   and make millions of dollars, I'm happy for you!
 
-  rev   date      author        change
-	1.0		10/2022			kasprzak			initial code
-	1.1		12/2022			kasprzak			added more methods
-	1.2		1/2023			kasprzak			added addRecord, moved everything to record/field based
-	1.4		10/2023			kasprzak			added getFirstRecord for going to first record in a recordset
-	1.5		11/2023			kasprzak			made arguement list for getFirstRecord consistent with getField
+revisions: see .h file
 */
 
 #include "SPI.h"
@@ -63,6 +58,27 @@ bool BulletDB::init() {
 	Return = readChipJEDEC();
 
 	return Return;
+}
+
+void BulletDB::putDatabaseRecordLength() {
+	
+	
+	setAddress(0);
+	Address = 0;
+	
+	WriteData(RecordLength);
+
+}
+
+uint8_t BulletDB::getDatabaseRecordLength() {
+	
+	
+	setAddress(0);
+	Address = 0;
+	DataBaseRecordLength = ReadData();
+	
+	return DataBaseRecordLength;
+
 }
 
  bool BulletDB::readChipJEDEC(){
@@ -358,7 +374,7 @@ uint32_t BulletDB::getFirstRecord( uint16_t TargetData, uint8_t FieldID){
 }
 
 // data field addField methods
-uint8_t BulletDB::addField(const char *FieldName, uint8_t *Data) {
+uint8_t BulletDB::addField(uint8_t *Data) {
 		
 	if (FieldCount >= MAX_FIELDS){
 		return 0;
@@ -367,13 +383,12 @@ uint8_t BulletDB::addField(const char *FieldName, uint8_t *Data) {
 	FieldStart[FieldCount] = RecordLength;
 	FieldLength[FieldCount] =  sizeof(*Data);
 	RecordLength = RecordLength + sizeof(*Data);
-	strcpy(fieldname[FieldCount], FieldName);
 	u8data[FieldCount] = Data;
 	FieldCount++;
 	return FieldCount - 1;
 }
 
-uint8_t BulletDB::addField(const char *FieldName, int *Data) {
+uint8_t BulletDB::addField(int *Data) {
 	if (FieldCount >= MAX_FIELDS){
 		return 0;
 	}
@@ -381,13 +396,12 @@ uint8_t BulletDB::addField(const char *FieldName, int *Data) {
 	FieldStart[FieldCount] = RecordLength;
 	FieldLength[FieldCount] =  sizeof(*Data);
 	RecordLength = RecordLength + sizeof(*Data);
-	strcpy(fieldname[FieldCount], FieldName);
 	intdata[FieldCount] = Data;
 	FieldCount++;
 	return FieldCount - 1;
 	}
 	
-uint8_t BulletDB::addField(const char *FieldName, int16_t *Data) {
+uint8_t BulletDB::addField(int16_t *Data) {
 	if (FieldCount >= MAX_FIELDS){
 		return 0;
 	}
@@ -395,13 +409,12 @@ uint8_t BulletDB::addField(const char *FieldName, int16_t *Data) {
 	FieldStart[FieldCount] = RecordLength;
 	FieldLength[FieldCount] =  sizeof(*Data);
 	RecordLength = RecordLength + sizeof(*Data);
-	strcpy(fieldname[FieldCount], FieldName);
 	i16data[FieldCount] = Data;
 	FieldCount++;
 	return FieldCount - 1;
 	}
 
-uint8_t BulletDB::addField(const char *FieldName, uint16_t *Data) {
+uint8_t BulletDB::addField(uint16_t *Data) {
 	if (FieldCount >= MAX_FIELDS){
 		return 0;
 	}
@@ -410,13 +423,12 @@ uint8_t BulletDB::addField(const char *FieldName, uint16_t *Data) {
 	FieldStart[FieldCount] = RecordLength;
 	FieldLength[FieldCount] =  sizeof(*Data);
 	RecordLength = RecordLength + sizeof(*Data);
-	strcpy(fieldname[FieldCount], FieldName);
 	u16data[FieldCount] = Data;
 	FieldCount++;
 	return FieldCount - 1;
 }
 
-uint8_t BulletDB::addField(const char *FieldName, int32_t *Data) {
+uint8_t BulletDB::addField(int32_t *Data) {
 	if (FieldCount >= MAX_FIELDS){
 		return 0;
 	}
@@ -424,13 +436,12 @@ uint8_t BulletDB::addField(const char *FieldName, int32_t *Data) {
 	FieldStart[FieldCount] = RecordLength;
 	FieldLength[FieldCount] =  sizeof(*Data);
 	RecordLength = RecordLength + sizeof(*Data);
-	strcpy(fieldname[FieldCount], FieldName);
 	i32data[FieldCount] = Data;
 	FieldCount++;
 	return FieldCount - 1;
 }
 
-uint8_t BulletDB::addField(const char *FieldName, uint32_t *Data) {
+uint8_t BulletDB::addField(uint32_t *Data) {
 	if (FieldCount >= MAX_FIELDS){
 		return 0;
 	}
@@ -438,12 +449,11 @@ uint8_t BulletDB::addField(const char *FieldName, uint32_t *Data) {
 	FieldStart[FieldCount] = RecordLength;
 	FieldLength[FieldCount] =  sizeof(*Data);
 	RecordLength = RecordLength + sizeof(*Data);
-	strcpy(fieldname[FieldCount], FieldName);
 	u32data[FieldCount] = Data;
 	FieldCount++;
 	return FieldCount - 1;
 }
-uint8_t BulletDB::addField(const char *FieldName, float *Data) {
+uint8_t BulletDB::addField(float *Data) {
 	if (FieldCount >= MAX_FIELDS){
 		return 0;
 	}
@@ -451,13 +461,12 @@ uint8_t BulletDB::addField(const char *FieldName, float *Data) {
 	FieldStart[FieldCount] = RecordLength;
 	FieldLength[FieldCount] =  sizeof(*Data);
 	RecordLength = RecordLength + sizeof(*Data);
-	strcpy(fieldname[FieldCount], FieldName);
 	fdata[FieldCount] = Data;
 	FieldCount++;
 	return FieldCount - 1;
 }
 
-uint8_t BulletDB::addField(const char *FieldName, double *Data) {
+uint8_t BulletDB::addField(double *Data) {
 	if (FieldCount >= MAX_FIELDS){
 		return 0;
 	}
@@ -465,13 +474,12 @@ uint8_t BulletDB::addField(const char *FieldName, double *Data) {
 	FieldStart[FieldCount] = RecordLength;
 	FieldLength[FieldCount] =  sizeof(*Data);
 	RecordLength = RecordLength + sizeof(*Data);
-	strcpy(fieldname[FieldCount], FieldName);
 	ddata[FieldCount] = Data;
 	FieldCount++;
 	return FieldCount - 1;
 }
 
-uint8_t BulletDB::addField(const char *FieldName, char *Data, uint8_t len) {
+uint8_t BulletDB::addField(char *Data, uint8_t len) {
 	if (FieldCount >= MAX_FIELDS){
 		return 0;
 	}
@@ -479,14 +487,13 @@ uint8_t BulletDB::addField(const char *FieldName, char *Data, uint8_t len) {
 	FieldStart[FieldCount] = RecordLength;
 	FieldLength[FieldCount] =  len;
 	RecordLength = RecordLength + len;
-	strcpy(fieldname[FieldCount], FieldName);
 	cdata[FieldCount] = Data;
 	FieldCount++;
 	return FieldCount - 1;
 }
 
 // header addHeaderData methods
-uint8_t BulletDB::addHeaderField(const char *HeaderFieldName, uint8_t *Data) {
+uint8_t BulletDB::addHeaderField(uint8_t *Data) {
 	
 	
 	if (Header_RecordLength + sizeof(*Data) >= RecordLength){
@@ -497,14 +504,13 @@ uint8_t BulletDB::addHeaderField(const char *HeaderFieldName, uint8_t *Data) {
 	Header_FieldStart[Header_FieldCount] = Header_RecordLength;
 	Header_FieldLength[Header_FieldCount] =  sizeof(*Data);
 	Header_RecordLength = Header_RecordLength + sizeof(*Data);
-	strcpy(Header_FieldName[Header_FieldCount], HeaderFieldName);
 	u8hdata[Header_FieldCount] = Data;
 	Header_FieldCount++;
 	return Header_FieldCount - 1;
 	
 }
 	
-uint8_t BulletDB::addHeaderField(const char *HeaderFieldName, int *Data) {
+uint8_t BulletDB::addHeaderField(int *Data) {
 	if (Header_RecordLength + sizeof(*Data) >= RecordLength){
 		return 0;
 	}
@@ -512,13 +518,12 @@ uint8_t BulletDB::addHeaderField(const char *HeaderFieldName, int *Data) {
 	Header_FieldStart[Header_FieldCount] = Header_RecordLength;
 	Header_FieldLength[Header_FieldCount] =  sizeof(*Data);
 	Header_RecordLength = Header_RecordLength + sizeof(*Data);
-	strcpy(Header_FieldName[Header_FieldCount], HeaderFieldName);
 	inthdata[Header_FieldCount] = Data;
 	Header_FieldCount++;
 	return Header_FieldCount - 1;
 }
 	
-uint8_t BulletDB::addHeaderField(const char *HeaderFieldName, int16_t *Data) {
+uint8_t BulletDB::addHeaderField(int16_t *Data) {
 	if (Header_RecordLength + sizeof(*Data) >= RecordLength){
 		return 0;
 	}
@@ -526,14 +531,13 @@ uint8_t BulletDB::addHeaderField(const char *HeaderFieldName, int16_t *Data) {
 	Header_FieldStart[Header_FieldCount] = Header_RecordLength;
 	Header_FieldLength[Header_FieldCount] =  sizeof(*Data);
 	Header_RecordLength = Header_RecordLength + sizeof(*Data);
-	strcpy(Header_FieldName[Header_FieldCount], HeaderFieldName);
 	i16hdata[Header_FieldCount] = Data;
 	Header_FieldCount++;
 	return Header_FieldCount - 1;
 	
 }
 
-uint8_t BulletDB::addHeaderField(const char *HeaderFieldName, uint16_t *Data) {
+uint8_t BulletDB::addHeaderField(uint16_t *Data) {
 	if (Header_RecordLength + sizeof(*Data) >= RecordLength){
 		return 0;
 	}
@@ -541,14 +545,13 @@ uint8_t BulletDB::addHeaderField(const char *HeaderFieldName, uint16_t *Data) {
 	Header_FieldStart[Header_FieldCount] = Header_RecordLength;
 	Header_FieldLength[Header_FieldCount] =  sizeof(*Data);
 	Header_RecordLength = Header_RecordLength + sizeof(*Data);
-	strcpy(Header_FieldName[Header_FieldCount], HeaderFieldName);
 	u16hdata[Header_FieldCount] = Data;
 	Header_FieldCount++;
 	return Header_FieldCount - 1;
 }
 
 
-uint8_t BulletDB::addHeaderField(const char *HeaderFieldName, int32_t *Data) {
+uint8_t BulletDB::addHeaderField(int32_t *Data) {
 	if (Header_RecordLength + sizeof(*Data) >= RecordLength){
 		return 0;
 	}
@@ -556,13 +559,12 @@ uint8_t BulletDB::addHeaderField(const char *HeaderFieldName, int32_t *Data) {
 	Header_FieldStart[Header_FieldCount] = Header_RecordLength;
 	Header_FieldLength[Header_FieldCount] =  sizeof(*Data);
 	Header_RecordLength = Header_RecordLength + sizeof(*Data);
-	strcpy(Header_FieldName[Header_FieldCount], HeaderFieldName);
 	i32hdata[Header_FieldCount] = Data;
 	Header_FieldCount++;
 	return Header_FieldCount - 1;
 }
 
-uint8_t BulletDB::addHeaderField(const char *HeaderFieldName, uint32_t *Data) {
+uint8_t BulletDB::addHeaderField(uint32_t *Data) {
 	if (Header_RecordLength + sizeof(*Data) >= RecordLength){
 		return 0;
 	}
@@ -570,13 +572,12 @@ uint8_t BulletDB::addHeaderField(const char *HeaderFieldName, uint32_t *Data) {
 	Header_FieldStart[Header_FieldCount] = Header_RecordLength;
 	Header_FieldLength[Header_FieldCount] =  sizeof(*Data);
 	Header_RecordLength = Header_RecordLength + sizeof(*Data);
-	strcpy(Header_FieldName[Header_FieldCount], HeaderFieldName);
 	u32hdata[Header_FieldCount] = Data;
 	Header_FieldCount++;
 	return Header_FieldCount - 1;
 }
 
-uint8_t BulletDB::addHeaderField(const char *HeaderFieldName, float *Data) {
+uint8_t BulletDB::addHeaderField(float *Data) {
 	if (Header_RecordLength + sizeof(*Data) >= RecordLength){
 		return 0;
 	}
@@ -584,14 +585,12 @@ uint8_t BulletDB::addHeaderField(const char *HeaderFieldName, float *Data) {
 	Header_FieldStart[Header_FieldCount] = Header_RecordLength;
 	Header_FieldLength[Header_FieldCount] =  sizeof(*Data);
 	Header_RecordLength = Header_RecordLength + sizeof(*Data);
-	strcpy(Header_FieldName[Header_FieldCount], HeaderFieldName);
 	fhdata[Header_FieldCount] = Data;
 	Header_FieldCount++;
 	return Header_FieldCount - 1;
 }
 
-uint8_t BulletDB::addHeaderField(const char *HeaderFieldName, double *Data) {
-	
+uint8_t BulletDB::addHeaderField(double *Data) {
 	
 	
 	if (Header_RecordLength + sizeof(*Data) >= RecordLength){
@@ -603,7 +602,6 @@ uint8_t BulletDB::addHeaderField(const char *HeaderFieldName, double *Data) {
 	Header_FieldStart[Header_FieldCount] = Header_RecordLength;
 	Header_FieldLength[Header_FieldCount] =  sizeof(*Data);
 	Header_RecordLength = Header_RecordLength + sizeof(*Data);
-	strcpy(Header_FieldName[Header_FieldCount], HeaderFieldName);
 	dhdata[Header_FieldCount] = Data;	
 	Header_FieldCount++;
 		
@@ -616,8 +614,6 @@ void BulletDB::listFields() {
 	for (i = 0; i < FieldCount; i++){
 		Serial.print("Number: ");
 		Serial.print(i);
-		Serial.print(", Name: ");
-		Serial.print(fieldname[i]);
 		Serial.print(", type: ");
 		if( DataType[i] == DT_U8){
 			Serial.print("uint8_t");
@@ -665,8 +661,6 @@ void BulletDB::listHeaderFields() {
 				
 		Serial.print("Number: ");
 		Serial.print(i);
-		Serial.print(", Name: ");
-		Serial.print(Header_FieldName[i]);
 		Serial.print(", type: ");
 		
 		if( Header_DataType[i] == DT_U8){
@@ -719,14 +713,6 @@ uint8_t BulletDB::getFieldCount(){
 
 uint8_t BulletDB::getHeaderFieldCount(){
 	return Header_FieldCount;
-}
-
-char * BulletDB::getFieldName(uint8_t Index){
-	return fieldname[Index];
-}
-
-char * BulletDB::getHeaderFieldName(uint8_t Index){
-	return Header_FieldName[Index];
 }
 
 uint16_t BulletDB::getRecordLength(){
@@ -788,7 +774,7 @@ bool BulletDB::addRecord(){
 	// write to address 0, otherwise advance address to next record
 	// save record does not advance address it returns to it's initial address
 	
-	
+
 	if (!ReadComplete){
 		findLastRecord();
 		ReadComplete = true;
@@ -813,7 +799,7 @@ bool BulletDB::addRecord(){
 		
 }
 
-void BulletDB::dumpBytes() {
+void BulletDB::dumpBytes(uint32_t StartRecord, uint32_t TotalRecords) {
 	
 	uint32_t TempRecord = 0;
 	uint8_t data = 0;
@@ -822,8 +808,8 @@ void BulletDB::dumpBytes() {
 	
 	TempRecord = CurrentRecord;
 	
-	CurrentRecord = 1;
-	MaxRecords = CurrentRecord + 500;
+	CurrentRecord = StartRecord;
+	MaxRecords = CurrentRecord + TotalRecords;
 	
 	Serial.println("Dump bytes-------------------- "); 
 	
@@ -1043,8 +1029,10 @@ void BulletDB::eraseAll(){
 	write_pause();
 	SPI.endTransaction();
 	NewCard = true;
+	
 	findLastRecord();
 
+	putDatabaseRecordLength();	
 
 }
 	
@@ -1383,9 +1371,8 @@ unsigned char BulletDB::flash_read_status(void)
 
 uint8_t BulletDB::ReadData() {
 	
-	//Serial.print(" ReadData::Address ");
-	//Serial.println(Address);
-	
+//	Serial.print(" ReadData::Address ");
+//	Serial.println(Address);
 	
   SPI.beginTransaction(SPISettings(SPEED_READ, MSBFIRST, SPI_MODE0));
   digitalWrite(cspin, LOW);
@@ -1393,9 +1380,8 @@ uint8_t BulletDB::ReadData() {
   SPI.transfer((uint8_t) ((Address >> 16) & 0xFF));
   SPI.transfer((uint8_t) ((Address >> 8) & 0xFF));
   SPI.transfer((uint8_t) (Address & 0xFF));
-  // SPI.transfer((uint8_t) (0b11111111)); needed for fast read
+  // SPI.transfer((uint8_t) (0b11111111)); // needed for fast read
   readvalue = SPI.transfer(0x00);
-   
   digitalWrite(cspin, HIGH); 
 
   SPI.endTransaction();  
@@ -1410,6 +1396,11 @@ uint8_t BulletDB::ReadData() {
 }
 
 void BulletDB::WriteData(uint8_t data) {
+	
+//	Serial.print(" WriteData::Address ");
+//	Serial.println(Address);
+//	Serial.print(" WriteData::data ");
+//	Serial.println(data);
 
 
 	SPI.beginTransaction(SPISettings(SPEED_WRITE, MSBFIRST, SPI_MODE0));
