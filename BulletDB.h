@@ -29,6 +29,8 @@
 	1.5		11/2023			kasprzak			made arguement list for getFirstRecord consistent with getField
 	1.6		03/2024			kasprzak			fixed getfield for doubles
 	1.8		01/2025			kasprzak			added ability to getDataBaseRecordSize and private put
+	2.0		02/2025			kasprzak			changed ReadData to ReadBytes and now read in sequence the field lenght (2x faster)
+	3.0		05/2025			kasprzak			changed WriteData to WriteBytes and now read in sequence the field lenght (5x faster), added faster block erase method
 
 */
 
@@ -48,20 +50,18 @@
 
 #include <SPI.h>  
 
-#define BULLET_DB_VER 1.8
+#define BULLET_DB_VER 3.0
 
 #define NULL_RECORD 0xFF
 
 #define MAX_FIELDS 50
 #define MAXCHARLEN 20
 
-#define MAXDATACHARLEN 10
+#define CARD_SIZE 8388608 // 8 388 607 = 8mb
 
-// #define CARD_SIZE 520191
-#define CARD_SIZE 8384511 // 8 388 607 = 8mb
-
-
-#define PAGE_SIZE 4096
+#define PAGE_SIZE 256
+#define SECTOR_SIZE 4096
+#define BLOCK_SIZE 65536
 
 #define SPEED_WRITE 25000000
 #define SPEED_READ  25000000
@@ -83,38 +83,19 @@
 #define CHIP_FORCE_RESTART -3
 
 #define CMD_READ_DATA          0x03
+#define CMD_READ_ID            0x4B
 #define CMD_CHIP_ERASE         0xC7
 #define CMD_WRITE_ENABLE       0x06
 #define CMD_WRITE_STATUS_REG   0x01
 #define CMD_READ_STATUS_REG    0x05
-#define CMD_SECTOR_ERASE       0x20//not tested
+#define CMD_SECTOR_ERASE       0x20
 #define STAT_WIP 1
 
-/*
-#define PAGE 4096
-#define PAGES 2048
-
-#define STAT_WEL 2
-
-#define CMD_PAGE_PROGRAM       0x02
-
-#define CMD_WRITE_DISABLE      0x04//not tested
-
-
-#define CMD_READ_HIGH_SPEED    0x0B//not tested
-
-#define CMD_BLOCK32K_ERASE     0x52//not tested
-#define CMD_RESET_DEVICE       0xF0//<<-different from winbond
-#define CMD_READ_ID            0x9F
-#define CMD_RELEASE_POWER_DOWN 0xAB//not tested
-#define CMD_POWER_DOWN         0xB9//not tested
-*/
-
-#define CMD_BLOCK64K_ERASE     0xD8 //not tested
+#define CMD_BLOCK64K_ERASE     0xD8 
 #define WRITEENABLE   0x06
 #define WRITE         0x02
 #define READ          0x03
-#define READ_FAST     0x0B // (make sure you add 8 bit dummy write after sending address
+#define READ_FAST     0x0B 
 #define RID           0xAB
 #define JEDEC         0x9F
 #define CHIPERASE     0x60
@@ -126,7 +107,7 @@ class  BulletDB {
 public:
 
 	BulletDB(int CS_PIN);
-	
+
 	bool init();
 	
 	uint8_t addField(uint8_t *Data);	
@@ -155,8 +136,12 @@ public:
 	uint32_t gotoLastRecord();
 	
 	char *getChipJEDEC();
+	
+	uint64_t getUniqueChipID();
 		
 	uint32_t getAddress();
+	
+	
 	
 	void setAddress(uint32_t Address);
 	
@@ -172,9 +157,11 @@ public:
 		
 	void eraseAll();
 	
+	void eraseFast();
+	
 	void dumpBytes(uint32_t StartRecord, uint32_t TotalRecords);
 
-	void erasePage(uint32_t PageNumber);
+	void eraseBlock(uint32_t BlockNumber);
 
 	bool addRecord();
 
@@ -200,6 +187,7 @@ public:
 	
 	uint32_t getTotalSpace();	
 		
+	uint32_t ChipCapacity = 0;
 	uint8_t getField(uint8_t Data, uint8_t Field);
 	int getField(int Data, uint8_t Field);
 	int16_t getField(int16_t Data, uint8_t Field);
@@ -207,6 +195,9 @@ public:
 	int32_t getField(int32_t Data, uint8_t Field);
 	uint32_t getField(uint32_t Data, uint8_t Field);
 	float getField(float Record, uint8_t Field);
+	
+	float getFieldSpecial(float Data, uint8_t Field);
+		
 	double getField(double Record, uint8_t Field);
 	char *getCharField(uint8_t Field);
 		
@@ -229,17 +220,27 @@ private:
 	
 	bool readChipJEDEC();
 	
+	uint8_t ReadData();
+	void ReadBytes(uint8_t Length);
+	
+	//bool WriteBytes(uint8_t Array[], uint8_t Length);
+	void WriteByte(uint8_t data);
+		
 	unsigned long bt = 0;
 	bool RecordAdded = false;
 	bool ReadComplete = false;
-	char stng[MAXDATACHARLEN];
-	uint8_t ReadData();
-	void WriteData(uint8_t data);
+	char stng[MAXCHARLEN];
+		
+	size_t pageOffset;
+	
 	char ChipJEDEC[15];
 	uint8_t a1Byte[1];
 	uint8_t a2Bytes[2];
 	uint8_t a4Bytes[4];
-	uint8_t a8Bytes[8];
+	uint8_t a8Bytes[8];	
+	uint8_t aBytes[8];
+	
+	
 	char dateBytes[8];
 	bool NewCard = false;
 	uint8_t ReadSpeed = 0;
@@ -268,8 +269,8 @@ private:
 	float *fdata[MAX_FIELDS];
 	double *ddata[MAX_FIELDS];
 	char *cdata[MAX_FIELDS];
-	char buf[MAXDATACHARLEN];
-	uint8_t len = MAXCHARLEN;
+	char buf[MAXCHARLEN];
+	uint8_t len = 0;
 	int8_t bytes[MAXCHARLEN];
 	
 	// header stuff
@@ -293,7 +294,7 @@ private:
 	uint8_t readvalue;
 	void write_pause();
 	unsigned char flash_read_status();
-	
+		
 	void B2ToBytes(uint8_t *bytes, int16_t var);
 	void B2ToBytes(uint8_t *bytes, uint16_t var);
 	void B4ToBytes(uint8_t *bytes, int var);
@@ -302,12 +303,11 @@ private:
 	void FloatToBytes(uint8_t *bytes, float var);
 	void DoubleToBytes(uint8_t *bytes, double var);
 	
-	// maybe someday i'll implement this...
-	void saveField(uint8_t Data[], uint8_t Field);
 	
 	// method to put the recordlengh to address 0
 	void putDatabaseRecordLength();
-	
+	void saveField(uint8_t Bytes, uint8_t Field);
+	void saveField(uint8_t Array[], uint8_t Bytes, uint8_t Field);
 		
 };
 
