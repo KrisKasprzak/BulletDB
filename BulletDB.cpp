@@ -11,6 +11,7 @@
   subject to the following conditions:
   The above copyright notice and this permission notice shall be included in all
   copies or substantial portions of the Software.
+  copies or substantial portions of the Software.
   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
   FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
@@ -32,13 +33,15 @@ void BulletDB::DebugData(int Line){
 	Serial.print("Line: "); Serial.print(Line); 
 	Serial.print(" Address: "); Serial.print(Address); 
 	Serial.print(" Current Rec: "); Serial.print(CurrentRecord); 
-	Serial.print(" Max Rec  : "); Serial.println(MaxRecords); 
+	Serial.print(" Max Rec  : "); Serial.print(MaxRecords); 
+	Serial.print(" Field Count  : "); Serial.println(FieldCount); 
 
 }
 
 BulletDB::BulletDB(int CS_PIN) {
 	
   cspin = CS_PIN;
+  
   
 }
 
@@ -66,7 +69,7 @@ void BulletDB::putDatabaseRecordLength() {
 	setAddress(0);
 	Address = 0;
 	
-	WriteData(RecordLength);
+	WriteByte(RecordLength);
 
 }
 
@@ -75,22 +78,66 @@ uint8_t BulletDB::getDatabaseRecordLength() {
 	
 	setAddress(0);
 	Address = 0;
-	DataBaseRecordLength = ReadData();
+	ReadBytes(1);	
+	DataBaseRecordLength = aBytes[0];
 	
 	return DataBaseRecordLength;
 
+}
+
+uint64_t BulletDB::getUniqueChipID(){
+	
+	uint8_t byteID[8];
+
+	SPI.beginTransaction(SPISettings(SPEED_WRITE, MSBFIRST, SPI_MODE0));
+	digitalWrite(cspin, LOW);
+	delay(10);
+	
+	SPI.transfer(CMD_READ_ID);
+	
+	SPI.transfer(0x00);
+	SPI.transfer(0x00);
+	SPI.transfer(0x00);
+	SPI.transfer(0x00);
+
+	byteID[0] = SPI.transfer(0x00);
+	byteID[1] = SPI.transfer(0x00);
+	byteID[2] = SPI.transfer(0x00);
+	byteID[3] = SPI.transfer(0x00);
+	byteID[4] = SPI.transfer(0x00);
+	byteID[5] = SPI.transfer(0x00);
+	byteID[6] = SPI.transfer(0x00);
+	byteID[7] = SPI.transfer(0x00);
+
+	digitalWrite(cspin, HIGH);
+	SPI.endTransaction();
+	
+	return (uint64_t) byteID[0] << 56  
+	| (uint64_t) byteID[1] << 48
+	| (uint64_t) byteID[2] << 40
+	| (uint64_t) byteID[3] << 32
+	| (uint64_t) byteID[4] << 24
+	| (uint64_t) byteID[5] << 16
+	| (uint64_t) byteID[6] << 8
+	| (uint64_t) byteID[7]
+	
+	;
+	
 }
 
  bool BulletDB::readChipJEDEC(){
 	 
 	uint8_t byteID[3];
 
-	////////////////////////////////////////////////////////////////////////
 	SPI.beginTransaction(SPISettings(SPEED_WRITE, MSBFIRST, SPI_MODE0));
 	digitalWrite(cspin, LOW);
 	delay(10);
 	
 	SPI.transfer(JEDEC);
+	//SPI.transfer((uint8_t) ((Address >> 16) & 0xFF));
+	//SPI.transfer((uint8_t) ((Address >> 8) & 0xFF));
+	//SPI.transfer((uint8_t) (Address & 0xFF));
+	
 
 	byteID[0] = SPI.transfer(0x00);
 	byteID[1] = SPI.transfer(0x00);
@@ -98,12 +145,15 @@ uint8_t BulletDB::getDatabaseRecordLength() {
 
 	digitalWrite(cspin, HIGH);
 	SPI.endTransaction();
-	
+
 	//Serial.println("Chip JEDEC"); 
 	//Serial.print("byteID[0] "); Serial.println(byteID[0], HEX);
 	//Serial.print("byteID[1] "); Serial.println(byteID[1], HEX);
 	//Serial.print("byteID[2] "); Serial.println(byteID[2], HEX);
 
+	ChipCapacity = pow(2, byteID[2]);
+	
+	Serial.print("ChipCapacity "); Serial.println(ChipCapacity);
 	
 	if ((byteID[0] == 0) || (byteID[0] == NULL_RECORD)) {
 		strcpy(ChipJEDEC,"INVALID CHIP");
@@ -151,26 +201,29 @@ uint32_t BulletDB::findLastRecord(){
 	
 	// test first record
 	Address = 1 * RecordLength;
-	RecType = ReadData();
+	
+	ReadBytes(1);
+	
+	RecType = aBytes[0];
 
 	if (RecType == NULL_RECORD){
 		// no DATA
-		//Serial.println("no data");
 		NewCard = true;
 		CurrentRecord = 0;
 		LastRecord = 0;
-		//DebugData(134);
 		ReadComplete = true;
 		return LastRecord;
 	}
 	
 	// test end
 	Address = MaxRecords * RecordLength;
-	RecType = ReadData();
+	
+	ReadBytes(1);
+	
+	RecType = aBytes[0];
 
 	if (RecType != NULL_RECORD){
 		// card full
-		//Serial.println("card full");
 		NewCard = false;
 		CurrentRecord = MaxRecords;
 		LastRecord = MaxRecords;
@@ -183,23 +236,6 @@ uint32_t BulletDB::findLastRecord(){
 	StartRecord = 1;
 	EndRecord = MaxRecords;
 	
-	/*
-	while(!Found) {
-		Address = StartRecord * RecordLength;
-		RecType = ReadData();
-		Serial.print("Record ");Serial.println(StartRecord );
-		Serial.print("RecType ");Serial.println(RecType );
-		if (RecType == NULL_RECORD){
-			break;
-		}
-		StartRecord++;
-	}
-	
-		StartRecord = 1;
-	EndRecord = MaxRecords;
-	*/
-		
-	
 	// OK last record is somewhere in between...
 	while(!Found) {
 		
@@ -207,59 +243,42 @@ uint32_t BulletDB::findLastRecord(){
 		
 		MiddleRecord = (EndRecord + StartRecord) / 2;
 		Address = MiddleRecord * RecordLength;
-		//Serial.print("MiddleRecord ");Serial.println(MiddleRecord );
+		ReadBytes(1);	
+		RecType = aBytes[0];
 
-		RecType = ReadData();
-		//Serial.print("RecType ");Serial.println(RecType );
-	
 		Address = (MiddleRecord + 1)  * RecordLength;
-		//Serial.print("MiddleRecord +1");Serial.println(MiddleRecord + 1 );
-		NextRecType = ReadData();
-	    //Serial.print("NextRecType ");Serial.println(NextRecType );
+		ReadBytes(1);	
+		NextRecType = aBytes[0];
 	
 		if ((RecType == NULL_RECORD) && (NextRecType == NULL_RECORD)){
-			//Serial.println("Its lower");
 			EndRecord = MiddleRecord;
 		}
 		if ((RecType != NULL_RECORD) && (NextRecType != NULL_RECORD)){
-			//Serial.println("Its higher");
 			StartRecord = MiddleRecord;
 		}
 		if ((RecType != NULL_RECORD) && (NextRecType == NULL_RECORD)){
 			// we found the end
-			//Serial.print("We found the end: "); Serial.println(Address);
-			//Serial.print("Iterations: "); Serial.println(Iteration);
 			LastRecord = MiddleRecord;
 			Found = true;
-		}
-		
-		if (Iteration > 200) { // 23 bits is max iteration for 23 bit for this chip, 1 more for good luck
-			//Serial.println("timeout issue");
-			//DebugData(134);
+		}		
+		if (Iteration > 24) { // 23 bits is max iteration for 23 bit for this chip, 1 more for good luck
 			NewCard = true;
 			CurrentRecord = 0;
 			LastRecord = 0;
 			ReadComplete = true;
 			return CHIP_FORCE_RESTART;
-		}
-			
+		}			
 	}
-	
-	
+		
 	NewCard = false;
 	LastRecord = MiddleRecord;
 	CurrentRecord = MiddleRecord;
-	
-// DebugData(199);
 
-	//Serial.print("RecordLength ");Serial.println(RecordLength );
-	//Serial.print("LastRecord ");Serial.println(LastRecord );
 	ReadComplete = true;
 		
 	return LastRecord;
 	
 }
-
 
 uint32_t BulletDB::getFirstRecord( uint16_t TargetData, uint8_t FieldID){
 	
@@ -270,14 +289,6 @@ uint32_t BulletDB::getFirstRecord( uint16_t TargetData, uint8_t FieldID){
 	uint32_t Iteration = 0;
 	uint16_t DataCR = 0, DataPR = 0;
 	
-	
-	//Serial.print("Searching field ");Serial.print(FieldID);
-	//Serial.print(", field name ");Serial.print(getFieldName(FieldID));
-	//Serial.print(", for first instance of data ");Serial.println(TargetData);
-
-	// test first record
-	// if the first record is target record, we found it and were done
-	// Address = 1 * RecordLength;
 	gotoRecord(1);
 	DataCR = getField(DataCR, FieldID);
 
@@ -314,27 +325,13 @@ uint32_t BulletDB::getFirstRecord( uint16_t TargetData, uint8_t FieldID){
 		DataCR = getField(DataCR, FieldID);
 		gotoRecord(MiddleRecord-1);
 		DataPR = getField(DataPR, FieldID);
-		/*
-		Serial.print("Iteration ");
-		Serial.print(Iteration);
-		Serial.print(", MiddleRecord ");
-		Serial.print(MiddleRecord);
-		Serial.print(", TargetData ");
-		Serial.print(TargetData);
-		Serial.print(", DataCR ");
-		Serial.print(DataCR);
-		Serial.print(", DataPR ");
-		Serial.print(DataPR);
-		Serial.print(", Decision: ");
-		*/
+
 		if ((DataCR == TargetData) && (DataPR == (TargetData - 1))){
 			// we found it...
-			//Serial.println("311 ------Data found ");
 			Found = true;
 			return MiddleRecord;
 		}
 		if (Iteration > 50) { // 23 bits is max iteration for 23 bit for this chip, 1 more for good luck
-			//Serial.println("317 -----iteration issue ");
 			NewCard = true;
 			CurrentRecord = 0;
 			EndRecord = 0;
@@ -344,23 +341,19 @@ uint32_t BulletDB::getFirstRecord( uint16_t TargetData, uint8_t FieldID){
 		
 		// determine if we search upper half or lower half
 		if ((DataCR == NULL_RECORD) && (DataPR == NULL_RECORD)){
-			//Serial.println("327 -----Data must be in lower half ");
 			EndRecord = MiddleRecord;
 		}	
 		// data in upper half
 		else if (DataCR < TargetData){
-			//Serial.println("332 ------Data must be in upper half ");
 			StartRecord = MiddleRecord;
 		}
 		
 		// data in lower half
 		else if (DataCR > TargetData){
-			//Serial.println("338 -----Data must be in lower half ");
 			EndRecord = MiddleRecord;
 		}
 		// data in lower half
 		else if ((DataCR == TargetData) && (DataCR == TargetData)) {
-			//Serial.println("344 -----Data must be in lower half ");
 			EndRecord = MiddleRecord;
 		}
 		else {
@@ -418,7 +411,6 @@ uint8_t BulletDB::addField(uint16_t *Data) {
 	if (FieldCount >= MAX_FIELDS){
 		return 0;
 	}
-
 	DataType[FieldCount] = DT_U16;
 	FieldStart[FieldCount] = RecordLength;
 	FieldLength[FieldCount] =  sizeof(*Data);
@@ -494,8 +486,7 @@ uint8_t BulletDB::addField(char *Data, uint8_t len) {
 
 // header addHeaderData methods
 uint8_t BulletDB::addHeaderField(uint8_t *Data) {
-	
-	
+		
 	if (Header_RecordLength + sizeof(*Data) >= RecordLength){
 		return 0;
 	}
@@ -592,19 +583,15 @@ uint8_t BulletDB::addHeaderField(float *Data) {
 
 uint8_t BulletDB::addHeaderField(double *Data) {
 	
-	
-	if (Header_RecordLength + sizeof(*Data) >= RecordLength){
-		
+	if (Header_RecordLength + sizeof(*Data) >= RecordLength){		
 		return 0;
-	}
-		
+	}		
 	Header_DataType[Header_FieldCount] = DT_DOUBLE;
 	Header_FieldStart[Header_FieldCount] = Header_RecordLength;
 	Header_FieldLength[Header_FieldCount] =  sizeof(*Data);
 	Header_RecordLength = Header_RecordLength + sizeof(*Data);
 	dhdata[Header_FieldCount] = Data;	
-	Header_FieldCount++;
-		
+	Header_FieldCount++;		
 	return Header_FieldCount - 1;
 		
 }
@@ -642,17 +629,13 @@ void BulletDB::listFields() {
 		else if( DataType[i] == DT_CHAR){
 			Serial.print("char");
 		}
-		
 		Serial.print(", start: ");
 		Serial.print(FieldStart[i]);
 		Serial.print(", Length: ");
-		Serial.println(FieldLength[i]);
-			
-	}
-	
+		Serial.println(FieldLength[i]);			
+	}	
 	Serial.print("Record length: ");Serial.println(RecordLength);
-	Serial.print("Field count: ");Serial.println(FieldCount);
-	
+	Serial.print("Field count: ");Serial.println(FieldCount);	
 }
 
 void BulletDB::listHeaderFields() {
@@ -700,11 +683,9 @@ void BulletDB::listHeaderFields() {
 	
 }
 
-uint32_t BulletDB::gotoLastRecord(){
-	
+uint32_t BulletDB::gotoLastRecord(){	
 	CurrentRecord = LastRecord;
-	return CurrentRecord;
-		
+	return CurrentRecord;		
 }
 
 uint8_t BulletDB::getFieldCount(){
@@ -728,7 +709,7 @@ uint32_t BulletDB::getUsedSpace(){
 }
 
 uint32_t BulletDB::getTotalSpace(){
-	return CARD_SIZE;
+	return ChipCapacity;
 }
 
 void BulletDB::B2ToBytes(uint8_t *bytes, int16_t var) {
@@ -772,8 +753,7 @@ bool BulletDB::addRecord(){
 	
 	// special case for address = 0 (new card)
 	// write to address 0, otherwise advance address to next record
-	// save record does not advance address it returns to it's initial address
-	
+	// save record does not advance address it returns to it's initial address	
 
 	if (!ReadComplete){
 		findLastRecord();
@@ -782,19 +762,16 @@ bool BulletDB::addRecord(){
 	
 	if (CurrentRecord >= MaxRecords) {
 		RecordAdded = false;
-		//Serial.println("addRecord failed");
 		return false;
 	}
 	
 	// now that record is written, bump the address to the next writable
 	// address
-	//Serial.print(" 655 CurrentRecord() ");Serial.println(CurrentRecord);
 	
 	CurrentRecord++;
 	LastRecord++;
 	RecordAdded = true;
 	
-	// Serial.print(" 659 CurrentRecord() ");Serial.println(CurrentRecord);
 	return true;
 		
 }
@@ -825,7 +802,9 @@ void BulletDB::dumpBytes(uint32_t StartRecord, uint32_t TotalRecords) {
 		Serial.print(" - ");
 			
 		for (j = 0; j< RecordLength; j++){
-			data = ReadData();
+			ReadBytes(1);
+			data = aBytes[0];
+			
 			if ((j == 0) && (data == NULL_RECORD)){
 				InvalidRecords++;
 			}
@@ -846,8 +825,6 @@ void BulletDB::dumpBytes(uint32_t StartRecord, uint32_t TotalRecords) {
 	gotoRecord(TempRecord);
 
 }
-
-
 		
 bool BulletDB::saveRecord() {
 	
@@ -857,75 +834,47 @@ bool BulletDB::saveRecord() {
 		}
 	}
 
-	// DebugData(728);
-	for (i= 0; i < FieldCount; i++){
-		
+	for (i= 0; i < FieldCount; i++){		
+	
 		Address = (CurrentRecord * RecordLength) + FieldStart[i];
 		
-		if (DataType[i] == DT_U8){
-			WriteData(*u8data[i]);
+		if (DataType[i] == DT_U8){			
+			aBytes[0] = *u8data[i];
+			saveField(1, i);			
 		}
 		else if (DataType[i] == DT_INT){			
-			B4ToBytes(a4Bytes, *intdata[i]);
-			WriteData(a4Bytes[0]);
-			WriteData(a4Bytes[1]);
-			WriteData(a4Bytes[2]);
-			WriteData(a4Bytes[3]);
+			B4ToBytes(aBytes, *intdata[i]);
+			saveField(4, i);
 		}
 		else if (DataType[i] == DT_I16){
-			B2ToBytes(a2Bytes, *i16data[i]);
-			WriteData(a2Bytes[0]);
-			WriteData(a2Bytes[1]);
+			B2ToBytes(aBytes, *i16data[i]);
+			saveField(2, i);
 		}
 		else if (DataType[i] == DT_U16){
-			B2ToBytes(a2Bytes, *u16data[i]);
-			WriteData(a2Bytes[0]);
-			WriteData(a2Bytes[1]);
+			B2ToBytes(aBytes, *u16data[i]);			
+			saveField(2, i);
 		}
 		else if (DataType[i] == DT_I32){			
-			B4ToBytes(a4Bytes, *i32data[i]);
-			WriteData(a4Bytes[0]);
-			WriteData(a4Bytes[1]);
-			WriteData(a4Bytes[2]);
-			WriteData(a4Bytes[3]);
+			B4ToBytes(aBytes, *i32data[i]);
+			saveField(4, i);
 		}
 		else if (DataType[i] == DT_U32){	
-			B4ToBytes(a4Bytes, *u32data[i]);
-			WriteData(a4Bytes[0]);
-			WriteData(a4Bytes[1]);
-			WriteData(a4Bytes[2]);
-			WriteData(a4Bytes[3]);
+			B4ToBytes(aBytes, *u32data[i]);
+			saveField(4, i);
 		}
 		else if (DataType[i] == DT_FLOAT){		
-			FloatToBytes(a4Bytes, *fdata[i]);
-		
-			WriteData(a4Bytes[0]);
-			WriteData(a4Bytes[1]);
-			WriteData(a4Bytes[2]);
-			WriteData(a4Bytes[3]);	
+			FloatToBytes(aBytes, *fdata[i]);
+			saveField(4, i);			
 		}	
 		else if (DataType[i] == DT_DOUBLE){		
-			DoubleToBytes(a8Bytes, *ddata[i]);
-			
-
-			WriteData(a8Bytes[0]);
-			WriteData(a8Bytes[1]);
-			WriteData(a8Bytes[2]);
-			WriteData(a8Bytes[3]);	
-			WriteData(a8Bytes[4]);
-			WriteData(a8Bytes[5]);
-			WriteData(a8Bytes[6]);
-			WriteData(a8Bytes[7]);	
-		}		
-	
-		else if (DataType[i] == DT_CHAR){
-				
-			strcpy(buf,cdata[i]);
-			for (j = 0; j < MAXDATACHARLEN; j ++){
-				WriteData(buf[j]);				
-			}		
+			DoubleToBytes(aBytes, *ddata[i]);
+			saveField(8, i);			
 		}
-			
+	
+		else if (DataType[i] == DT_CHAR){				
+			strcpy(buf,cdata[i]);
+			saveField((uint8_t*)buf, sizeof(buf), i);
+		}
 	}
 	RecordAdded = false;
 	return true;
@@ -935,86 +884,61 @@ bool BulletDB::saveRecord() {
 
 bool BulletDB::saveHeader() {
 
-
 	if (!RecordAdded) {
 		if (!addRecord()){
 			return false;
 		}
-	}
-	
+	}	
 	
 	for (i= 0; i < Header_FieldCount; i++){
 		
 		Address = (CurrentRecord * RecordLength) + Header_FieldStart[i];
 		
 		if (Header_DataType[i] == DT_U8){
-			WriteData(*u8hdata[i]);
+			aBytes[0] = *u8hdata[i];
+			saveField(4, i);	
+			//WriteByte(*u8hdata[i]);
 		}
 		else if (Header_DataType[i] == DT_INT){
 		
 			Header_DataType[Header_FieldCount] = DT_INT;
-			B4ToBytes(a4Bytes, *inthdata[i]);
-			WriteData(a4Bytes[0]);
-			WriteData(a4Bytes[1]);
-			WriteData(a4Bytes[2]);
-			WriteData(a4Bytes[3]);
+			B4ToBytes(aBytes, *inthdata[i]);
+			saveField(4, i);	
+
 		}
 		else if (Header_DataType[i] == DT_I16){
-			B2ToBytes(a2Bytes, *i16hdata[i]);
-			WriteData(a2Bytes[0]);
-			WriteData(a2Bytes[1]);
+			B2ToBytes(aBytes, *i16hdata[i]);
+			saveField(2, i);	
 		}
 		else if (Header_DataType[i] == DT_U16){
-			B2ToBytes(a2Bytes, *u16hdata[i]);
-			WriteData(a2Bytes[0]);
-			WriteData(a2Bytes[1]);
+			B2ToBytes(aBytes, *u16hdata[i]);
+			saveField(2, i);	
 		}
 		else if (Header_DataType[i] == DT_I32){
-			B4ToBytes(a4Bytes, *i32hdata[i]);
-			WriteData(a4Bytes[0]);
-			WriteData(a4Bytes[1]);
-			WriteData(a4Bytes[2]);
-			WriteData(a4Bytes[3]);
+			B4ToBytes(aBytes, *i32hdata[i]);
+			saveField(4, i);	
 		}
 		else if (Header_DataType[i] == DT_U32){
-			B4ToBytes(a4Bytes, *u32hdata[i]);
-			WriteData(a4Bytes[0]);
-			WriteData(a4Bytes[1]);
-			WriteData(a4Bytes[2]);
-			WriteData(a4Bytes[3]);
+			B4ToBytes(aBytes, *u32hdata[i]);
+			saveField(4, i);	
 		}
 		else if (Header_DataType[i] == DT_FLOAT){
-			FloatToBytes(a4Bytes, *fhdata[i]);
-			WriteData(a4Bytes[0]);
-			WriteData(a4Bytes[1]);
-			WriteData(a4Bytes[2]);
-			WriteData(a4Bytes[3]);	
+			FloatToBytes(aBytes, *fhdata[i]);
+			saveField(4, i);		
 		}
 		else if (Header_DataType[i] == DT_DOUBLE){
-			DoubleToBytes(a8Bytes, *dhdata[i]);
-			WriteData(a8Bytes[0]);
-			WriteData(a8Bytes[1]);
-			WriteData(a8Bytes[2]);
-			WriteData(a8Bytes[3]);	
-			WriteData(a8Bytes[4]);
-			WriteData(a8Bytes[5]);
-			WriteData(a8Bytes[6]);
-			WriteData(a8Bytes[7]);	
+			DoubleToBytes(aBytes, *dhdata[i]);
+			saveField(4, i);	
 		}		
 	}
-
-	//DebugData(865);
-	// no real checking
-	// todo read recs and make sure???
 	return true;
 	
 }
 
 void BulletDB::eraseAll(){
 	
-	SPI.beginTransaction(SPISettings(SPEED_WRITE, MSBFIRST, SPI_MODE0));
-	
-	//Serial.println("Erasing chip");
+	SPI.beginTransaction(SPISettings(SPEED_WRITE, MSBFIRST, SPI_MODE0));	
+
 	flash_wait_for_write = 1;
 	write_pause();
 	digitalWriteFast(cspin, LOW);
@@ -1028,17 +952,42 @@ void BulletDB::eraseAll(){
 	flash_wait_for_write = 1;
 	write_pause();
 	SPI.endTransaction();
-	NewCard = true;
 	
+	NewCard = true;	
 	findLastRecord();
-
-	putDatabaseRecordLength();	
+	putDatabaseRecordLength();
+	gotoRecord(1);	
 
 }
+void BulletDB::eraseFast(){
 	
-void BulletDB::erasePage(uint32_t PageNumber){
+	uint32_t usedlocks = 0;
+	
+	getLastRecord();
+	gotoLastRecord();
+	Address = (CurrentRecord * RecordLength);
+	usedlocks = (Address / BLOCK_SIZE) + 1;	
 
-	Address = PageNumber * PAGE_SIZE;
+	if (usedlocks > 128){
+		usedlocks = 128;
+	}
+
+	for (i = 0; i <= usedlocks; i++){
+		Serial.println(i);
+		eraseBlock(i);
+	}
+	
+	NewCard = true;	
+	findLastRecord();
+	putDatabaseRecordLength();	
+	gotoRecord(1);
+	
+}
+
+	
+void BulletDB::eraseBlock(uint32_t BlockNumber){
+
+	Address = BlockNumber * BLOCK_SIZE;
 	SPI.beginTransaction(SPISettings(SPEED_WRITE, MSBFIRST, SPI_MODE0));
 	digitalWrite(cspin, LOW);
 	SPI.transfer(WRITEENABLE); // write instruction
@@ -1049,15 +998,14 @@ void BulletDB::erasePage(uint32_t PageNumber){
 	
 	SPI.beginTransaction(SPISettings(SPEED_WRITE, MSBFIRST, SPI_MODE0));
 	digitalWrite(cspin, LOW);
-	SPI.transfer(CMD_SECTOR_ERASE); // write instruction
+	SPI.transfer(CMD_BLOCK64K_ERASE); // write instruction
 	SPI.transfer((Address >> 16) & 0xFF);
 	SPI.transfer((Address >> 8) & 0xFF);
 	SPI.transfer(Address & 0xFF);
 	digitalWrite(cspin, HIGH);
 	write_pause();
 	SPI.endTransaction();
-	flash_wait_for_write = 1;
-	
+	flash_wait_for_write = 1;	
 	
 }
 
@@ -1069,82 +1017,118 @@ uint8_t BulletDB::getField(uint8_t Data, uint8_t Field){
 
 
 	Address = (CurrentRecord * RecordLength) + FieldStart[Field];
-	a1Byte[0] = ReadData();
-
-	return (uint8_t) a1Byte[0];
+	ReadBytes(1);
+	return (uint8_t) aBytes[0];
 
 }
 
 int BulletDB::getField(int Data, uint8_t Field){
 
 	Address = (CurrentRecord * RecordLength) + FieldStart[Field];
-	a4Bytes[0] = ReadData();
-	a4Bytes[1] = ReadData();
-	a4Bytes[2] = ReadData();
-	a4Bytes[3] = ReadData(); //6
+	
+	ReadBytes(sizeof(Data));
+	
+	//a4Bytes[0] = ReadData();
+	//a4Bytes[1] = ReadData();
+	//a4Bytes[2] = ReadData();
+	//a4Bytes[3] = ReadData(); //6
 
-	return (int) ( (a4Bytes[0] << 24) | (a4Bytes[1] << 16) | (a4Bytes[2] << 8) | (a4Bytes[3]));
+	return (int) ( (aBytes[0] << 24) | (aBytes[1] << 16) | (aBytes[2] << 8) | (aBytes[3]));
 
 }
 
 int16_t BulletDB::getField(int16_t Data, uint8_t Field){
 
 	Address = (CurrentRecord * RecordLength) + FieldStart[Field];
-	a2Bytes[0] = ReadData();
-	a2Bytes[1] = ReadData();
+	
+	ReadBytes(sizeof(Data));
+	
+	//a2Bytes[0] = ReadData();
+	//a2Bytes[1] = ReadData();
 
-	return (int16_t) (a2Bytes[0] << 8) | (a2Bytes[1]);
+	return (int16_t) (aBytes[0] << 8) | (aBytes[1]);
 
 }
 
 uint16_t BulletDB::getField(uint16_t Data, uint8_t Field){
 
 	Address = (CurrentRecord * RecordLength) + FieldStart[Field];
-	a2Bytes[0] = ReadData();
-	a2Bytes[1] = ReadData();
+	
+	ReadBytes(sizeof(Data));
+	
+	//a2Bytes[0] = ReadData();
+	//a2Bytes[1] = ReadData();
 
-	return (uint16_t) (a2Bytes[0] << 8) | (a2Bytes[1]);
+	return (uint16_t) (aBytes[0] << 8) | (aBytes[1]);
 
 }
 
 int32_t BulletDB::getField(int32_t Data, uint8_t Field){
 
 	Address = (CurrentRecord * RecordLength) + FieldStart[Field];
-	a4Bytes[0] = ReadData();
-	a4Bytes[1] = ReadData();
-	a4Bytes[2] = ReadData();
-	a4Bytes[3] = ReadData(); //6
+	
+	ReadBytes(sizeof(Data));
+	
+	//a4Bytes[0] = ReadData();
+	//a4Bytes[1] = ReadData();
+	//a4Bytes[2] = ReadData();
+	//a4Bytes[3] = ReadData(); //6
 
-	return (int32_t) ( (a4Bytes[0] << 24) | (a4Bytes[1] << 16) | (a4Bytes[2] << 8) | (a4Bytes[3]));
+	return (int32_t) ( (aBytes[0] << 24) | (aBytes[1] << 16) | (aBytes[2] << 8) | (aBytes[3]));
 
 }
 
 uint32_t BulletDB::getField(uint32_t Data, uint8_t Field){
 
 	Address = (CurrentRecord * RecordLength) + FieldStart[Field];
-	a4Bytes[0] = ReadData();
-	a4Bytes[1] = ReadData();
-	a4Bytes[2] = ReadData();
-	a4Bytes[3] = ReadData(); //6
+	
+	ReadBytes(sizeof(Data));
+	
+	//a4Bytes[0] = ReadData();
+	//a4Bytes[1] = ReadData();
+	//a4Bytes[2] = ReadData();
+	//a4Bytes[3] = ReadData(); //6
 
-	return (uint32_t) ( (a4Bytes[0] << 24) | (a4Bytes[1] << 16) | (a4Bytes[2] << 8) | (a4Bytes[3]));
+	return (uint32_t) ( (aBytes[0] << 24) | (aBytes[1] << 16) | (aBytes[2] << 8) | (aBytes[3]));
 
 }
 
 float BulletDB::getField(float Data, uint8_t Field){
 	float a;
 	Address = (CurrentRecord * RecordLength) + FieldStart[Field];
-	a4Bytes[0] = ReadData();
-	a4Bytes[1] = ReadData();
-	a4Bytes[2] = ReadData();
-	a4Bytes[3] = ReadData();	
 	
-	memcpy(&a, a4Bytes, sizeof(float));
+	ReadBytes(sizeof(Data));
+	
+	//a4Bytes[0] = ReadData();
+	//a4Bytes[1] = ReadData();
+	//a4Bytes[2] = ReadData();
+	//a4Bytes[3] = ReadData();	
+	
+	memcpy(&a, aBytes, sizeof(float));
 	
 	return a;
 	
 	// return *(float *)a4Bytes;
 }
+
+
+/*
+float BulletDB::getField(float Data, uint8_t Field){
+	float a;
+	Address = (CurrentRecord * RecordLength) + FieldStart[Field];
+	
+	
+	ReadBytes(sizeof(float));
+
+	
+	memcpy(&a, aBytes, sizeof(float));
+	
+	return a;
+	
+	// return *(float *)a4Bytes;
+}
+*/
+
 
 double BulletDB::getField(double Data, uint8_t Field){
 
@@ -1152,6 +1136,9 @@ double BulletDB::getField(double Data, uint8_t Field){
 
 	Address = (CurrentRecord * RecordLength) + FieldStart[Field];
 		
+	ReadBytes(sizeof(Data));
+	
+	/*
 	a8Bytes[0] = ReadData();
 	a8Bytes[1] = ReadData();
 	a8Bytes[2] = ReadData();
@@ -1160,25 +1147,26 @@ double BulletDB::getField(double Data, uint8_t Field){
 	a8Bytes[5] = ReadData();
 	a8Bytes[6] = ReadData();
 	a8Bytes[7] = ReadData();	
+	*/
 
-	memcpy(&a, a8Bytes, sizeof(double));
+	memcpy(&a, aBytes, sizeof(double));
 
 	return a;
-	
-	// return *( (double *) (a8Bytes));
 }
 
 char  *BulletDB::getCharField(uint8_t Field){
 	
 	Address = (CurrentRecord * RecordLength) + FieldStart[Field];
 
-	for (i = 0; i < len;i++){
-		bytes[i] = ReadData();
-	}
+	ReadBytes(MAXCHARLEN);
+
+	//for (i = 0; i < len;i++){
+	//	bytes[i] = ReadData();
+	//}
 	
-	memset(stng,0,MAXDATACHARLEN);
+	memset(stng,0,MAXCHARLEN);
 	
-	memcpy(stng, bytes, len);
+	memcpy(stng, aBytes, MAXCHARLEN);
 	// Serial.print("1101 char  "); Serial.println(stng);
 	
 	return stng;
@@ -1192,9 +1180,11 @@ uint8_t BulletDB::getHeaderField(uint8_t Data, uint8_t Field){
 
 	Address = (CurrentRecord * RecordLength) + Header_FieldStart[Field];
 	
-	a1Byte[0] = ReadData();
+	ReadBytes(sizeof(Data));
 	
-	return (uint8_t) a1Byte[0];
+	// aByte[0] = ReadData();
+	
+	return (uint8_t) aBytes[0];
 
 }
 
@@ -1202,22 +1192,27 @@ int BulletDB::getHeaderField(int Data, uint8_t Field){
 
 	Address = (CurrentRecord * RecordLength) + Header_FieldStart[Field];
 
-	a4Bytes[0] = ReadData();
-	a4Bytes[1] = ReadData();
-	a4Bytes[2] = ReadData();
-	a4Bytes[3] = ReadData(); //6
+	ReadBytes(sizeof(Data));
 
-	return (int) ( (a4Bytes[0] << 24) | (a4Bytes[1] << 16) | (a4Bytes[2] << 8) | (a4Bytes[3]));
+	//a4Bytes[0] = ReadData();
+	//a4Bytes[1] = ReadData();
+	//a4Bytes[2] = ReadData();
+	//a4Bytes[3] = ReadData(); //6
+
+	return (int) ( (aBytes[0] << 24) | (aBytes[1] << 16) | (aBytes[2] << 8) | (aBytes[3]));
 
 }
 
 int16_t BulletDB::getHeaderField(int16_t Data, uint8_t Field){
 
 	Address = (CurrentRecord * RecordLength) + Header_FieldStart[Field];
-	a2Bytes[0] = ReadData();
-	a2Bytes[1] = ReadData();
+	
+	ReadBytes(sizeof(Data));
+	
+	//a2Bytes[0] = ReadData();
+	//a2Bytes[1] = ReadData();
 
-	return (int16_t) (a2Bytes[0] << 8) | (a2Bytes[1]);
+	return (int16_t) (aBytes[0] << 8) | (aBytes[1]);
 
 }
 
@@ -1225,10 +1220,12 @@ uint16_t BulletDB::getHeaderField(uint16_t Data, uint8_t Field){
 
 	Address = (CurrentRecord * RecordLength) + Header_FieldStart[Field];
 
-	a2Bytes[0] = ReadData();
-	a2Bytes[1] = ReadData();
+	ReadBytes(sizeof(Data));
 
-	return (uint16_t) (a2Bytes[0] << 8) | (a2Bytes[1]);
+	//a2Bytes[0] = ReadData();
+	//a2Bytes[1] = ReadData();
+
+	return (uint16_t) (aBytes[0] << 8) | (aBytes[1]);
 
 }
 
@@ -1236,38 +1233,52 @@ int32_t BulletDB::getHeaderField(int32_t Data, uint8_t Field){
 
 	Address = (CurrentRecord * RecordLength) + Header_FieldStart[Field];
 
-	a4Bytes[0] = ReadData();
-	a4Bytes[1] = ReadData();
-	a4Bytes[2] = ReadData();
-	a4Bytes[3] = ReadData(); //6
+	ReadBytes(sizeof(Data));
 
-	return (int32_t) ( (a4Bytes[0] << 24) | (a4Bytes[1] << 16) | (a4Bytes[2] << 8) | (a4Bytes[3]));
+	//a4Bytes[0] = ReadData();
+	//a4Bytes[1] = ReadData();
+	//a4Bytes[2] = ReadData();
+	//a4Bytes[3] = ReadData(); //6
+
+	return (int32_t) ( (aBytes[0] << 24) | (aBytes[1] << 16) | (aBytes[2] << 8) | (aBytes[3]));
 
 }
 
 uint32_t BulletDB::getHeaderField(uint32_t Data, uint8_t Field){
 
 	Address = (CurrentRecord * RecordLength) + Header_FieldStart[Field];
+	
+	ReadBytes(sizeof(Data));
+	
+	//a4Bytes[0] = ReadData();
+	//a4Bytes[1] = ReadData();
+	//a4Bytes[2] = ReadData();
+	//a4Bytes[3] = ReadData(); //6
 
-	a4Bytes[0] = ReadData();
-	a4Bytes[1] = ReadData();
-	a4Bytes[2] = ReadData();
-	a4Bytes[3] = ReadData(); //6
-
-	return (uint32_t) ( (a4Bytes[0] << 24) | (a4Bytes[1] << 16) | (a4Bytes[2] << 8) | (a4Bytes[3]));
+	return (uint32_t) ( (aBytes[0] << 24) | (aBytes[1] << 16) | (aBytes[2] << 8) | (aBytes[3]));
 
 }
 
 float BulletDB::getHeaderField(float Data, uint8_t Field){
-
+	
+	float a;
+	
 	Address = (CurrentRecord * RecordLength) + Header_FieldStart[Field];
 
-	a4Bytes[0] = ReadData();
-	a4Bytes[1] = ReadData();
-	a4Bytes[2] = ReadData();
-	a4Bytes[3] = ReadData();	
+	ReadBytes(sizeof(Data));
 
-	return *(float *)a4Bytes;
+	//a4Bytes[0] = ReadData();
+	//a4Bytes[1] = ReadData();
+	//a4Bytes[2] = ReadData();
+	//a4Bytes[3] = ReadData();	
+
+	// return *(float *)aBytes;
+	
+	memcpy(&a, aBytes, sizeof(float));
+	
+	return a;
+	
+	
 }
 
 double BulletDB::getHeaderField(double Data, uint8_t Field){
@@ -1276,16 +1287,18 @@ double BulletDB::getHeaderField(double Data, uint8_t Field){
 
 	Address = (CurrentRecord * RecordLength) + Header_FieldStart[Field];
 
-	a8Bytes[0] = ReadData();
-	a8Bytes[1] = ReadData();
-	a8Bytes[2] = ReadData();
-	a8Bytes[3] = ReadData();	
-	a8Bytes[4] = ReadData();
-	a8Bytes[5] = ReadData();
-	a8Bytes[6] = ReadData();
-	a8Bytes[7] = ReadData();	
+	ReadBytes(sizeof(Data));
 	
-	memcpy(&a, a8Bytes, sizeof(double));
+	//a8Bytes[0] = ReadData();
+	//a8Bytes[1] = ReadData();
+	//a8Bytes[2] = ReadData();
+	//a8Bytes[3] = ReadData();	
+	//a8Bytes[4] = ReadData();
+	//a8Bytes[5] = ReadData();
+	//a8Bytes[6] = ReadData();
+	//a8Bytes[7] = ReadData();	
+	
+	memcpy(&a, aBytes, sizeof(double));
 
 	return a;
 	// return *(double *)a8Bytes;
@@ -1295,11 +1308,13 @@ char  *BulletDB::getCharHeaderField(uint8_t Field){
 	
 	Address = (CurrentRecord * RecordLength) + Header_FieldStart[Field];
 	
-	for (i = 0; i < len;i++){
-		bytes[i] = ReadData();
-	}
+	ReadBytes(sizeof(len));
 	
-	memset(stng,0,MAXDATACHARLEN);
+	//for (i = 0; i < len;i++){
+	//	bytes[i] = ReadData();
+	//}
+	
+	memset(stng,0,MAXCHARLEN);
 	
 	memcpy(stng, bytes, len);
 	
@@ -1309,44 +1324,36 @@ char  *BulletDB::getCharHeaderField(uint8_t Field){
 
 uint8_t BulletDB::getFieldDataType(uint8_t Index){
 	return DataType[Index];
-	
 }
 
 uint32_t BulletDB::getCurrentRecord(){
-	return CurrentRecord;
-	
+	return CurrentRecord;	
 }
 
 uint32_t BulletDB::getLastRecord(){
-	return LastRecord;
-	
+	return LastRecord;	
 }
 
 uint32_t BulletDB::getMaxRecords(){
-	return MaxRecords;
-	
+	return MaxRecords;	
 }
 
 
 void BulletDB::setAddress(uint32_t Address){
-	Address = Address;
-	
+	Address = Address;	
 }
 
 uint32_t BulletDB::getAddress(){
-	return Address;
-	
+	return Address;	
 }
 
-void BulletDB::gotoRecord(uint32_t RecordNumber){
-	
+void BulletDB::gotoRecord(uint32_t RecordNumber){	
 	if (RecordNumber > MaxRecords){
 		CurrentRecord = MaxRecords;
 	}
 	else {
 		CurrentRecord = RecordNumber;
 	}
-
 }
 
 void BulletDB::write_pause(void)
@@ -1357,10 +1364,7 @@ void BulletDB::write_pause(void)
   }
 }
 
-unsigned char BulletDB::flash_read_status(void)
-
-{
-  
+unsigned char BulletDB::flash_read_status(void){
   // This can't do a write_pause
   digitalWrite(cspin, LOW);
   SPI.transfer(CMD_READ_STATUS_REG);
@@ -1370,10 +1374,6 @@ unsigned char BulletDB::flash_read_status(void)
 }
 
 uint8_t BulletDB::ReadData() {
-	
-//	Serial.print(" ReadData::Address ");
-//	Serial.println(Address);
-	
   SPI.beginTransaction(SPISettings(SPEED_READ, MSBFIRST, SPI_MODE0));
   digitalWrite(cspin, LOW);
   SPI.transfer(READ); // read instruction
@@ -1395,16 +1395,107 @@ uint8_t BulletDB::ReadData() {
   
 }
 
-void BulletDB::WriteData(uint8_t data) {
-	
-//	Serial.print(" WriteData::Address ");
-//	Serial.println(Address);
-//	Serial.print(" WriteData::data ");
-//	Serial.println(data);
 
+void BulletDB::ReadBytes(uint8_t Length) {
+	
+  uint8_t i = 0;
+  SPI.beginTransaction(SPISettings(SPEED_READ, MSBFIRST, SPI_MODE0));
+  digitalWriteFast(cspin, LOW);
+  SPI.transfer(READ); // read instruction
+  SPI.transfer((uint8_t) ((Address >> 16) & 0xFF));
+  SPI.transfer((uint8_t) ((Address >> 8) & 0xFF));
+  SPI.transfer((uint8_t) (Address & 0xFF));
+  
+  for (i = 0; i < Length; i++){	  
+	aBytes[i] = SPI.transfer(0x00);
+  }
+  digitalWriteFast(cspin, HIGH); 
+
+  SPI.endTransaction();  
+  
+  flash_wait_for_write = 1;
+  write_pause();
+  Address = Address + Length;
+  
+}
+
+/*
+bool BulletDB::WriteBytes(uint8_t Array[], uint8_t Length) {
+
+	uint8_t i = 0, LastByte = Length;
+	bool PageSpan = false;
+	pageOffset = Address % PAGE_SIZE;
+	
+	if ((pageOffset + Length) > PAGE_SIZE){
+		PageSpan = true;		
+		LastByte = PAGE_SIZE - pageOffset;
+	}
 
 	SPI.beginTransaction(SPISettings(SPEED_WRITE, MSBFIRST, SPI_MODE0));
-	digitalWrite(cspin, LOW);
+	digitalWriteFast(cspin, LOW);
+	SPI.transfer(WRITEENABLE);
+	digitalWriteFast(cspin, HIGH); 
+	
+	digitalWriteFast(cspin, LOW);
+	
+	SPI.transfer(WRITE);	
+	SPI.transfer((uint8_t) ((Address >> 16) & 0xFF));
+	SPI.transfer((uint8_t) ((Address >> 8) & 0xFF));
+	SPI.transfer((uint8_t) (Address & 0xFF));	
+	
+	for (i = 0; i < LastByte; i++){
+		SPI.transfer(Array[i]);
+	}
+	 
+	digitalWriteFast(cspin, HIGH); 
+	
+	SPI.endTransaction();	
+	
+	flash_wait_for_write = 1; 
+	write_pause();	
+
+	// since we are writing byte by byte we need to advance address
+	// writing byte arrays is unreliable--not sure why
+	Address = Address + LastByte;
+	
+	if (!PageSpan){
+		Address = Address + Length;
+		return true;
+	}
+	SPI.beginTransaction(SPISettings(SPEED_WRITE, MSBFIRST, SPI_MODE0));
+	digitalWriteFast(cspin, LOW);
+	SPI.transfer(WRITEENABLE);
+	digitalWriteFast(cspin, HIGH); 
+	
+	digitalWriteFast(cspin, LOW);
+	
+	SPI.transfer(WRITE);	
+	SPI.transfer((uint8_t) ((Address >> 16) & 0xFF));
+	SPI.transfer((uint8_t) ((Address >> 8) & 0xFF));
+	SPI.transfer((uint8_t) (Address & 0xFF));	
+	
+	for (i = LastByte; i < Length; i++){
+		SPI.transfer(Array[i]);
+	}
+	 
+	digitalWriteFast(cspin, HIGH); 
+	
+	SPI.endTransaction();	
+	
+	flash_wait_for_write = 1; 
+	write_pause();	
+
+	// since we are writing byte by byte we need to advance address
+	// writing byte arrays is unreliable--not sure why
+	Address = Address + Length;
+	
+	return true;
+}
+*/
+void BulletDB::WriteByte(uint8_t data) {
+	
+	SPI.beginTransaction(SPISettings(SPEED_WRITE, MSBFIRST, SPI_MODE0));
+	digitalWriteFast(cspin, LOW);
 	SPI.transfer(WRITEENABLE); // write instruction
 	digitalWrite(cspin, HIGH); 
 	SPI.endTransaction();
@@ -1413,14 +1504,14 @@ void BulletDB::WriteData(uint8_t data) {
 	write_pause();
    
 	SPI.beginTransaction(SPISettings(SPEED_WRITE, MSBFIRST, SPI_MODE0));
-	digitalWrite(cspin, LOW);
+	digitalWriteFast(cspin, LOW);
 	SPI.transfer(WRITE); // write instruction
 	SPI.transfer((uint8_t) ((Address >> 16) & 0xFF));
 	SPI.transfer((uint8_t) ((Address >> 8) & 0xFF));
 	SPI.transfer((uint8_t) (Address & 0xFF));
 	SPI.transfer(data);
 	//SPI.transfer(255); // data sheet says to write this...   
-	digitalWrite(cspin, HIGH);  
+	digitalWriteFast(cspin, HIGH);  
 	SPI.endTransaction();
 
 	flash_wait_for_write = 1; 
@@ -1431,269 +1522,155 @@ void BulletDB::WriteData(uint8_t data) {
 
 }
 
-
-// not sure why reading and writing byte arrays sometimes fails
-// would be a better way if it worked reliably
-// maybe a timing issue
-
-/*
-uint32_t BulletDB::saveRecord() {
-	
-	// we absoutely must have TotalRecords otherwise
-	// we will not know where the first writable address
-	// is, user can call this to manage the small performance
-	// from this call, but if they forget to call it. it must be called
-	// before we start writing
-	// note that the performance hit is usually 20microseconds
-	
-	//DebugData(778);
-
-	if (!ReadComplete){
-		//unsigned long st = micros();
-		Serial.print("readTotalRecords not done. so doing it now...");
-		//Serial.println(micros() - st);
-		
-		readTotalRecords();
-		//Serial.print("readTotalRecords ");Serial.println(TotalRecords);
-		ReadComplete = true;
-	}
-	if (NextWritableAddress >= CARD_SIZE){
-		// no room
-		return CARD_SIZE;
-	}	
-	
-	Address = NextWritableAddress;
-	//DebugData(800);
-	
-	Address = CurrentRecord * RecordLength;
-	
-	
-	for (i= 0; i < FieldCount; i++){
-		
-		if (DataType[i] == DT_U8){
-			a1Byte[0] = *u8data[i];
-			//WriteData(*u8data[i]);
-			//Serial.print("1504 field: ");
-			//Serial.print(i);
-			//Serial.print(", Address "); Serial.print(Address);
-			//Serial.print(", saving byte "); Serial.println(a1Byte[0]);
-			//WriteData(*u8data[i]);
-			saveField(a1Byte, i);
-		}
-		else if (DataType[i] == DT_INT){			
-			B4ToBytes(a4Bytes, *i16data[i]);
-			saveField(a4Bytes, i);
-		}
-		else if (DataType[i] == DT_I16){
-			B2ToBytes(a2Bytes, *i16data[i]);
-			saveField(a2Bytes, i);
-		}
-		else if (DataType[i] == DT_U16){
-			B2ToBytes(a2Bytes, *u16data[i]);
-			saveField(a2Bytes, i);
-		}
-		else if (DataType[i] == DT_I32){
-			B4ToBytes(a4Bytes, *i32data[i]);
-			saveField(a4Bytes, i);
-		}
-		else if (DataType[i] == DT_U32){
-			B4ToBytes(a4Bytes, *u32data[i]);
-			saveField(a4Bytes, i);
-		}
-		else if (DataType[i] == DT_FLOAT){		
-			FloatToBytes(a4Bytes, *fdata[i]);
-			
-			if (CurrentRecord == 9){
-				Serial.print("Float data: ");
-				Serial.print(*fdata[i]);Serial.print(", ");	
-				Serial.print(fieldname[i]);Serial.print(", ");
-				Serial.print(*fdata[i]);Serial.print(", ");		
-				Serial.print(a4Bytes[0]);Serial.print(", ");
-				Serial.print(a4Bytes[1]);Serial.print(", ");
-				Serial.print(a4Bytes[2]);Serial.print(", ");
-				Serial.println(a4Bytes[3]);	
-			}
-			
-			saveField(a4Bytes, i);
-		}	
-		else if (DataType[i] == DT_DOUBLE){		
-			DoubleToBytes(a8Bytes, *ddata[i]);
-			saveField(a8Bytes, i);
-		}		
-	
-		else if (DataType[i] == DT_CHAR){
-				
-			strcpy(buf,cdata[i]);
-			for (j = 0; j < MAXDATACHARLEN; j ++){
-				WriteData(buf[j]);	
-			}		
-			// Serial.println("");
-		}
-	}
-
-
-	Address = TempAddress;
-	
-	// now that record is written, bump the address to the next writable
-	// address
-	Records++;
-	CurrentRecord++;
-	TotalRecords++;
-	
-	Address = NextWritableAddress + RecordLength;
-	NextWritableAddress	= Address;
-	
-	//DebugData(865);
-	return CurrentRecord;
-	
-}
-
-uint32_t BulletDB::saveHeader() {
-
-
-	if (!ReadComplete){
-		//unsigned long st = micros();
-		//Serial.print("readTotalRecords not done. so doing it now...");
-		//Serial.println(micros() - st);
-		
-		readTotalRecords();
-		//Serial.print("readTotalRecords ");Serial.println(TotalRecords);
-		ReadComplete = true;
-	}
-	
-	
-	
-	
-	TempAddress = Address;
-	//Serial.print("TempAddress ");Serial.println(TempAddress);
-	//Serial.println(Address);
-	// Serial.print("Address ");Serial.println(Address);
-	
-	
-	for (i= 0; i < Header_FieldCount; i++){
-		//Serial.print("Address ");Serial.print(Address);
-		//Serial.print(", Writing header for: ");Serial.print(Header_FieldName[i]);
-		
-		if (Header_DataType[i] == DT_U8){
-			//Serial.print(", 864 ");Serial.print(*u8hdata[i]);Serial.print(", ");
-			//Serial.println(*u8hdata[i]);
-			a1Byte[0] = *u8hdata[i];
-			saveField(a1Byte, i);
-		}
-		else if (Header_DataType[i] == DT_INT){
-		
-			//Serial.print(", 869 ");Serial.print(*inthdata[i]);Serial.print(", ");
-			//Serial.print(a4Bytes[0]);Serial.print(", ");
-			//Serial.print(a4Bytes[1]);Serial.print(", ");
-			//Serial.print(a4Bytes[2]);Serial.print(", ");
-			//Serial.println(a4Bytes[4]);
-			
-
-			B4ToBytes(a4Bytes, *inthdata[i]);
-			saveField(a4Bytes, i);
-			
-		}
-		else if (Header_DataType[i] == DT_I16){
-			//Serial.print(", 879 ");Serial.print(*i16hdata[i]);Serial.print(", ");
-			
-			//Serial.print(a4Bytes[0]);Serial.print(", ");
-			//Serial.println(a4Bytes[1]);
-
-			
-			B2ToBytes(a2Bytes, *i16hdata[i]);
-			saveField(a2Bytes, i);
-		}
-		else if (Header_DataType[i] == DT_U16){
-			//Serial.print(", 885 ");Serial.print(*u16hdata[i]);Serial.print(", ");
-			//			Serial.print(a4Bytes[0]);Serial.print(", ");
-			//Serial.println(a4Bytes[1]);
-			B2ToBytes(a2Bytes, *u16hdata[i]);
-			saveField(a2Bytes, i);
-		}
-		else if (Header_DataType[i] == DT_I32){
-			//Serial.print(", 892 ");Serial.println(*i32hdata[i]);
-			B4ToBytes(a4Bytes, *i32hdata[i]);
-			saveField(a4Bytes, i);
-		}
-		else if (Header_DataType[i] == DT_U32){
-			//Serial.print(", 900 ");Serial.println(*u32hdata[i]);
-			B4ToBytes(a4Bytes, *u32hdata[i]);
-			saveField(a4Bytes, i);
-		}
-		else if (Header_DataType[i] == DT_FLOAT){
-			//Serial.print(", 908 ");Serial.println(*fhdata[i]);
-			FloatToBytes(a4Bytes, *fhdata[i]);
-			saveField(a4Bytes, i);
-
-		}
-		else if (Header_DataType[i] == DT_DOUBLE){
-			//Serial.print(", 917 ");Serial.println(*dhdata[i]);
-			DoubleToBytes(a8Bytes, *dhdata[i]);
-			saveField(a8Bytes, i);
-		}		
-	}
-
-
-	Address = TempAddress;
-	
-	// now that record is written, bump the address to the next writable
-	// address
-	Records++;
-	CurrentRecord++;
-	TotalRecords++;
-	
-	Address = CurrentRecord * RecordLength;
-	
-	//DebugData(865);
-	return CurrentRecord;
-	
-}
-
-void BulletDB::saveField(uint8_t Data[], uint8_t Field) {
+void BulletDB::saveField(uint8_t Bytes, uint8_t Field) {
 		
 	TempAddress = Address;
-	
-	
-	// get the address back to the first byte of the record--need a known starting point
 	Address = CurrentRecord * RecordLength;
-	//Serial.print("731 saveField start address ");Serial.println(Address);
 	Address = Address + FieldStart[Field];
-	//Serial.print("733 save address ");Serial.println(Address);
-	//Serial.print("field length ");Serial.println(FieldLength[Field]);
-	//Serial.print("sizeof data arrat ");Serial.println(sizeof(Data));
 		
-	SPI.beginTransaction(SPISettings(SPEED_WRITE, MSBFIRST, SPI_MODE0));
-	digitalWrite(cspin, LOW);
-	SPI.transfer(WRITEENABLE); // write instruction
-	digitalWrite(cspin, HIGH); 
-	SPI.endTransaction();
+	uint8_t i = 0, LastByte = Bytes;
+	bool PageSpan = false;
+	pageOffset = Address % PAGE_SIZE;
 	
-	flash_wait_for_write = 1;
-	write_pause();
-  
- 	SPI.beginTransaction(SPISettings(SPEED_WRITE, MSBFIRST, SPI_MODE0));
-	digitalWrite(cspin, LOW);
+	if ((pageOffset + Bytes) > PAGE_SIZE){
+		PageSpan = true;		
+		LastByte = PAGE_SIZE - pageOffset;
+	}
 
-	SPI.transfer(WRITE); // write instruction
+	SPI.beginTransaction(SPISettings(SPEED_WRITE, MSBFIRST, SPI_MODE0));
+	digitalWriteFast(cspin, LOW);
+	SPI.transfer(WRITEENABLE);
+	digitalWriteFast(cspin, HIGH); 
+	
+	
+	digitalWriteFast(cspin, LOW);	
+	SPI.transfer(WRITE);	
 	SPI.transfer((uint8_t) ((Address >> 16) & 0xFF));
 	SPI.transfer((uint8_t) ((Address >> 8) & 0xFF));
-	SPI.transfer((uint8_t) (Address & 0xFF));
-		
-	SPI.transfer(Data, Data, FieldLength[Field]);
-	// SPI.transfer(255); // data sheet says to write this...   
-	digitalWrite(cspin, HIGH);  
+	SPI.transfer((uint8_t) (Address & 0xFF));	
 	
-	SPI.endTransaction();
-
+	for (i = 0; i < LastByte; i++){
+		SPI.transfer(aBytes[i]);
+	}
+	 
+	digitalWriteFast(cspin, HIGH); 
+	
+	SPI.endTransaction();	
+	
 	flash_wait_for_write = 1; 
-	write_pause();
+	write_pause();	
 
-	Address = TempAddress;
-	UsedAddress = FieldLength[Field];
-  
+	// since we are writing byte by byte we need to advance address
+	// writing byte arrays is unreliable--not sure why
+	Address = Address + LastByte;
+	
+	if (!PageSpan){
+		Address = Address + Bytes;
+		return;
+	}
+	SPI.beginTransaction(SPISettings(SPEED_WRITE, MSBFIRST, SPI_MODE0));
+	digitalWriteFast(cspin, LOW);
+	SPI.transfer(WRITEENABLE);
+	digitalWriteFast(cspin, HIGH); 
+	
+	digitalWriteFast(cspin, LOW);
+	
+	SPI.transfer(WRITE);	
+	SPI.transfer((uint8_t) ((Address >> 16) & 0xFF));
+	SPI.transfer((uint8_t) ((Address >> 8) & 0xFF));
+	SPI.transfer((uint8_t) (Address & 0xFF));	
+	
+	for (i = LastByte; i < Bytes; i++){
+		SPI.transfer(aBytes[i]);
+	}
+	 
+	digitalWriteFast(cspin, HIGH); 
+	
+	SPI.endTransaction();	
+	
+	flash_wait_for_write = 1; 
+	write_pause();	
+
+	// since we are writing byte by byte we need to advance address
+	// writing byte arrays is unreliable--not sure why
+	Address = Address + Bytes;
 
 }
 
-*/
+void BulletDB::saveField(uint8_t Array[], uint8_t Bytes, uint8_t Field) {
+		
+	TempAddress = Address;
+	Address = CurrentRecord * RecordLength;
+	Address = Address + FieldStart[Field];
+		
+	uint8_t i = 0, LastByte = Bytes;
+	bool PageSpan = false;
+	pageOffset = Address % PAGE_SIZE;
+	
+	if ((pageOffset + Bytes) > PAGE_SIZE){
+		PageSpan = true;		
+		LastByte = PAGE_SIZE - pageOffset;
+	}
+
+	SPI.beginTransaction(SPISettings(SPEED_WRITE, MSBFIRST, SPI_MODE0));
+	digitalWriteFast(cspin, LOW);
+	SPI.transfer(WRITEENABLE);
+	digitalWriteFast(cspin, HIGH); 
+	
+	
+	digitalWriteFast(cspin, LOW);	
+	SPI.transfer(WRITE);	
+	SPI.transfer((uint8_t) ((Address >> 16) & 0xFF));
+	SPI.transfer((uint8_t) ((Address >> 8) & 0xFF));
+	SPI.transfer((uint8_t) (Address & 0xFF));	
+	
+	for (i = 0; i < LastByte; i++){
+		SPI.transfer(Array[i]);
+	}
+	 
+	digitalWriteFast(cspin, HIGH); 
+	
+	SPI.endTransaction();	
+	
+	flash_wait_for_write = 1; 
+	write_pause();	
+
+	// since we are writing byte by byte we need to advance address
+	// writing byte arrays is unreliable--not sure why
+	Address = Address + LastByte;
+	
+	if (!PageSpan){
+		Address = Address + Bytes;
+		return;
+	}
+	SPI.beginTransaction(SPISettings(SPEED_WRITE, MSBFIRST, SPI_MODE0));
+	digitalWriteFast(cspin, LOW);
+	SPI.transfer(WRITEENABLE);
+	digitalWriteFast(cspin, HIGH); 
+	
+	digitalWriteFast(cspin, LOW);
+	
+	SPI.transfer(WRITE);	
+	SPI.transfer((uint8_t) ((Address >> 16) & 0xFF));
+	SPI.transfer((uint8_t) ((Address >> 8) & 0xFF));
+	SPI.transfer((uint8_t) (Address & 0xFF));	
+	
+	for (i = LastByte; i < Bytes; i++){
+		SPI.transfer(Array[i]);
+	}
+	 
+	digitalWriteFast(cspin, HIGH); 
+	
+	SPI.endTransaction();	
+	
+	flash_wait_for_write = 1; 
+	write_pause();	
+
+	// since we are writing byte by byte we need to advance address
+	// writing byte arrays is unreliable--not sure why
+	Address = Address + Bytes;
+
+}
+
 
 //////////////////////////////////////////////////////////
