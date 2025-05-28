@@ -57,7 +57,7 @@
 #define MAX_FIELDS 50
 #define MAXCHARLEN 20
 
-#define CARD_SIZE 8388608 // 8 388 607 = 8mb
+#define CARD_SIZE 8388608 // 2 ^ 17
 
 #define PAGE_SIZE 256
 #define SECTOR_SIZE 4096
