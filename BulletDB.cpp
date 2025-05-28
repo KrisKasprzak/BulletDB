@@ -941,14 +941,14 @@ void BulletDB::eraseAll(){
 
 	flash_wait_for_write = 1;
 	write_pause();
-	digitalWriteFast(cspin, LOW);
+	digitalWrite(cspin, LOW);
 	SPI.transfer(WRITEENABLE);
-	digitalWriteFast(cspin, HIGH);
+	digitalWrite(cspin, HIGH);
 	write_pause();
 	delay(25);
-	digitalWriteFast(cspin, LOW);
+	digitalWrite(cspin, LOW);
 	SPI.transfer(CHIPERASE);
-	digitalWriteFast(cspin, HIGH);
+	digitalWrite(cspin, HIGH);
 	flash_wait_for_write = 1;
 	write_pause();
 	SPI.endTransaction();
@@ -1400,7 +1400,7 @@ void BulletDB::ReadBytes(uint8_t Length) {
 	
   uint8_t i = 0;
   SPI.beginTransaction(SPISettings(SPEED_READ, MSBFIRST, SPI_MODE0));
-  digitalWriteFast(cspin, LOW);
+  digitalWrite(cspin, LOW);
   SPI.transfer(READ); // read instruction
   SPI.transfer((uint8_t) ((Address >> 16) & 0xFF));
   SPI.transfer((uint8_t) ((Address >> 8) & 0xFF));
@@ -1409,7 +1409,7 @@ void BulletDB::ReadBytes(uint8_t Length) {
   for (i = 0; i < Length; i++){	  
 	aBytes[i] = SPI.transfer(0x00);
   }
-  digitalWriteFast(cspin, HIGH); 
+  digitalWrite(cspin, HIGH); 
 
   SPI.endTransaction();  
   
@@ -1432,11 +1432,11 @@ bool BulletDB::WriteBytes(uint8_t Array[], uint8_t Length) {
 	}
 
 	SPI.beginTransaction(SPISettings(SPEED_WRITE, MSBFIRST, SPI_MODE0));
-	digitalWriteFast(cspin, LOW);
+	digitalWrite(cspin, LOW);
 	SPI.transfer(WRITEENABLE);
-	digitalWriteFast(cspin, HIGH); 
+	digitalWrite(cspin, HIGH); 
 	
-	digitalWriteFast(cspin, LOW);
+	digitalWrite(cspin, LOW);
 	
 	SPI.transfer(WRITE);	
 	SPI.transfer((uint8_t) ((Address >> 16) & 0xFF));
@@ -1447,7 +1447,7 @@ bool BulletDB::WriteBytes(uint8_t Array[], uint8_t Length) {
 		SPI.transfer(Array[i]);
 	}
 	 
-	digitalWriteFast(cspin, HIGH); 
+	digitalWrite(cspin, HIGH); 
 	
 	SPI.endTransaction();	
 	
@@ -1463,11 +1463,11 @@ bool BulletDB::WriteBytes(uint8_t Array[], uint8_t Length) {
 		return true;
 	}
 	SPI.beginTransaction(SPISettings(SPEED_WRITE, MSBFIRST, SPI_MODE0));
-	digitalWriteFast(cspin, LOW);
+	digitalWrite(cspin, LOW);
 	SPI.transfer(WRITEENABLE);
-	digitalWriteFast(cspin, HIGH); 
+	digitalWrite(cspin, HIGH); 
 	
-	digitalWriteFast(cspin, LOW);
+	digitalWrite(cspin, LOW);
 	
 	SPI.transfer(WRITE);	
 	SPI.transfer((uint8_t) ((Address >> 16) & 0xFF));
@@ -1478,7 +1478,7 @@ bool BulletDB::WriteBytes(uint8_t Array[], uint8_t Length) {
 		SPI.transfer(Array[i]);
 	}
 	 
-	digitalWriteFast(cspin, HIGH); 
+	digitalWrite(cspin, HIGH); 
 	
 	SPI.endTransaction();	
 	
@@ -1495,7 +1495,7 @@ bool BulletDB::WriteBytes(uint8_t Array[], uint8_t Length) {
 void BulletDB::WriteByte(uint8_t data) {
 	
 	SPI.beginTransaction(SPISettings(SPEED_WRITE, MSBFIRST, SPI_MODE0));
-	digitalWriteFast(cspin, LOW);
+	digitalWrite(cspin, LOW);
 	SPI.transfer(WRITEENABLE); // write instruction
 	digitalWrite(cspin, HIGH); 
 	SPI.endTransaction();
@@ -1504,14 +1504,14 @@ void BulletDB::WriteByte(uint8_t data) {
 	write_pause();
    
 	SPI.beginTransaction(SPISettings(SPEED_WRITE, MSBFIRST, SPI_MODE0));
-	digitalWriteFast(cspin, LOW);
+	digitalWrite(cspin, LOW);
 	SPI.transfer(WRITE); // write instruction
 	SPI.transfer((uint8_t) ((Address >> 16) & 0xFF));
 	SPI.transfer((uint8_t) ((Address >> 8) & 0xFF));
 	SPI.transfer((uint8_t) (Address & 0xFF));
 	SPI.transfer(data);
 	//SPI.transfer(255); // data sheet says to write this...   
-	digitalWriteFast(cspin, HIGH);  
+	digitalWrite(cspin, HIGH);  
 	SPI.endTransaction();
 
 	flash_wait_for_write = 1; 
@@ -1538,12 +1538,12 @@ void BulletDB::saveField(uint8_t Bytes, uint8_t Field) {
 	}
 
 	SPI.beginTransaction(SPISettings(SPEED_WRITE, MSBFIRST, SPI_MODE0));
-	digitalWriteFast(cspin, LOW);
+	digitalWrite(cspin, LOW);
 	SPI.transfer(WRITEENABLE);
-	digitalWriteFast(cspin, HIGH); 
+	digitalWrite(cspin, HIGH); 
 	
 	
-	digitalWriteFast(cspin, LOW);	
+	digitalWrite(cspin, LOW);	
 	SPI.transfer(WRITE);	
 	SPI.transfer((uint8_t) ((Address >> 16) & 0xFF));
 	SPI.transfer((uint8_t) ((Address >> 8) & 0xFF));
@@ -1553,7 +1553,7 @@ void BulletDB::saveField(uint8_t Bytes, uint8_t Field) {
 		SPI.transfer(aBytes[i]);
 	}
 	 
-	digitalWriteFast(cspin, HIGH); 
+	digitalWrite(cspin, HIGH); 
 	
 	SPI.endTransaction();	
 	
@@ -1569,11 +1569,11 @@ void BulletDB::saveField(uint8_t Bytes, uint8_t Field) {
 		return;
 	}
 	SPI.beginTransaction(SPISettings(SPEED_WRITE, MSBFIRST, SPI_MODE0));
-	digitalWriteFast(cspin, LOW);
+	digitalWrite(cspin, LOW);
 	SPI.transfer(WRITEENABLE);
-	digitalWriteFast(cspin, HIGH); 
+	digitalWrite(cspin, HIGH); 
 	
-	digitalWriteFast(cspin, LOW);
+	digitalWrite(cspin, LOW);
 	
 	SPI.transfer(WRITE);	
 	SPI.transfer((uint8_t) ((Address >> 16) & 0xFF));
@@ -1584,7 +1584,7 @@ void BulletDB::saveField(uint8_t Bytes, uint8_t Field) {
 		SPI.transfer(aBytes[i]);
 	}
 	 
-	digitalWriteFast(cspin, HIGH); 
+	digitalWrite(cspin, HIGH); 
 	
 	SPI.endTransaction();	
 	
@@ -1613,12 +1613,11 @@ void BulletDB::saveField(uint8_t Array[], uint8_t Bytes, uint8_t Field) {
 	}
 
 	SPI.beginTransaction(SPISettings(SPEED_WRITE, MSBFIRST, SPI_MODE0));
-	digitalWriteFast(cspin, LOW);
+	digitalWrite(cspin, LOW);
 	SPI.transfer(WRITEENABLE);
-	digitalWriteFast(cspin, HIGH); 
+	digitalWrite(cspin, HIGH); 	
 	
-	
-	digitalWriteFast(cspin, LOW);	
+	digitalWrite(cspin, LOW);	
 	SPI.transfer(WRITE);	
 	SPI.transfer((uint8_t) ((Address >> 16) & 0xFF));
 	SPI.transfer((uint8_t) ((Address >> 8) & 0xFF));
@@ -1628,7 +1627,7 @@ void BulletDB::saveField(uint8_t Array[], uint8_t Bytes, uint8_t Field) {
 		SPI.transfer(Array[i]);
 	}
 	 
-	digitalWriteFast(cspin, HIGH); 
+	digitalWrite(cspin, HIGH); 
 	
 	SPI.endTransaction();	
 	
@@ -1644,11 +1643,11 @@ void BulletDB::saveField(uint8_t Array[], uint8_t Bytes, uint8_t Field) {
 		return;
 	}
 	SPI.beginTransaction(SPISettings(SPEED_WRITE, MSBFIRST, SPI_MODE0));
-	digitalWriteFast(cspin, LOW);
+	digitalWrite(cspin, LOW);
 	SPI.transfer(WRITEENABLE);
-	digitalWriteFast(cspin, HIGH); 
+	digitalWrite(cspin, HIGH); 
 	
-	digitalWriteFast(cspin, LOW);
+	digitalWrite(cspin, LOW);
 	
 	SPI.transfer(WRITE);	
 	SPI.transfer((uint8_t) ((Address >> 16) & 0xFF));
@@ -1659,7 +1658,7 @@ void BulletDB::saveField(uint8_t Array[], uint8_t Bytes, uint8_t Field) {
 		SPI.transfer(Array[i]);
 	}
 	 
-	digitalWriteFast(cspin, HIGH); 
+	digitalWrite(cspin, HIGH); 
 	
 	SPI.endTransaction();	
 	
