@@ -153,7 +153,7 @@ uint64_t BulletDB::getUniqueChipID(){
 
 	ChipCapacity = pow(2, byteID[2]);
 	
-	Serial.print("ChipCapacity "); Serial.println(ChipCapacity);
+	// Serial.print("ChipCapacity "); Serial.println(ChipCapacity);
 	
 	if ((byteID[0] == 0) || (byteID[0] == NULL_RECORD)) {
 		strcpy(ChipJEDEC,"INVALID CHIP");
@@ -959,6 +959,23 @@ void BulletDB::eraseAll(){
 	gotoRecord(1);	
 
 }
+
+uint8_t BulletDB::getUsedBlocks(){
+	uint8_t usedBlocks = 0;
+	
+	usedBlocks = (Address / BLOCK_SIZE);
+	
+	if ((usedBlocks == 0) && (Address > 0)){
+		usedBlocks = 0;
+	}
+	if (usedBlocks > 128){
+		usedBlocks = 128;
+	}
+	return usedBlocks;	
+	
+}
+
+/*
 void BulletDB::eraseFast(){
 	
 	uint32_t usedlocks = 0;
@@ -966,7 +983,7 @@ void BulletDB::eraseFast(){
 	getLastRecord();
 	gotoLastRecord();
 	Address = (CurrentRecord * RecordLength);
-	usedlocks = (Address / BLOCK_SIZE) + 1;	
+	usedlocks = (Address / BLOCK_SIZE);	
 
 	if (usedlocks > 128){
 		usedlocks = 128;
@@ -974,18 +991,12 @@ void BulletDB::eraseFast(){
 
 	for (i = 0; i <= usedlocks; i++){
 		Serial.println(i);
-		eraseBlock(i);
-	}
-	
-	NewCard = true;	
-	findLastRecord();
-	putDatabaseRecordLength();	
-	gotoRecord(1);
-	
-}
 
 	
-void BulletDB::eraseBlock(uint32_t BlockNumber){
+}
+*/
+	
+void BulletDB::eraseBlock(uint8_t BlockNumber){
 
 	Address = BlockNumber * BLOCK_SIZE;
 	SPI.beginTransaction(SPISettings(SPEED_WRITE, MSBFIRST, SPI_MODE0));
@@ -1006,6 +1017,14 @@ void BulletDB::eraseBlock(uint32_t BlockNumber){
 	write_pause();
 	SPI.endTransaction();
 	flash_wait_for_write = 1;	
+	
+	if (BlockNumber == getUsedBlocks()){
+		//Serial.println("1021 writing rec length:");
+		NewCard = true;	
+		findLastRecord();
+		putDatabaseRecordLength();
+		gotoRecord(1);	
+	}
 	
 }
 
@@ -1158,15 +1177,15 @@ char  *BulletDB::getCharField(uint8_t Field){
 	
 	Address = (CurrentRecord * RecordLength) + FieldStart[Field];
 
-	ReadBytes(MAXCHARLEN);
+	ReadBytes(BULLETDB_MAXCHARLEN);
 
 	//for (i = 0; i < len;i++){
 	//	bytes[i] = ReadData();
 	//}
 	
-	memset(stng,0,MAXCHARLEN);
+	memset(stng,0,BULLETDB_MAXCHARLEN);
 	
-	memcpy(stng, aBytes, MAXCHARLEN);
+	memcpy(stng, aBytes, BULLETDB_MAXCHARLEN);
 	// Serial.print("1101 char  "); Serial.println(stng);
 	
 	return stng;
@@ -1314,7 +1333,7 @@ char  *BulletDB::getCharHeaderField(uint8_t Field){
 	//	bytes[i] = ReadData();
 	//}
 	
-	memset(stng,0,MAXCHARLEN);
+	memset(stng,0,BULLETDB_MAXCHARLEN);
 	
 	memcpy(stng, bytes, len);
 	
@@ -1551,6 +1570,7 @@ void BulletDB::saveField(uint8_t Bytes, uint8_t Field) {
 	
 	for (i = 0; i < LastByte; i++){
 		SPI.transfer(aBytes[i]);
+		
 	}
 	 
 	digitalWrite(cspin, HIGH); 
@@ -1615,7 +1635,8 @@ void BulletDB::saveField(uint8_t Array[], uint8_t Bytes, uint8_t Field) {
 	SPI.beginTransaction(SPISettings(SPEED_WRITE, MSBFIRST, SPI_MODE0));
 	digitalWrite(cspin, LOW);
 	SPI.transfer(WRITEENABLE);
-	digitalWrite(cspin, HIGH); 	
+	digitalWrite(cspin, HIGH); 
+	
 	
 	digitalWrite(cspin, LOW);	
 	SPI.transfer(WRITE);	
