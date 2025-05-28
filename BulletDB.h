@@ -55,7 +55,7 @@
 #define NULL_RECORD 0xFF
 
 #define MAX_FIELDS 50
-#define MAXCHARLEN 20
+#define BULLETDB_MAXCHARLEN 20
 
 #define CARD_SIZE 8388608 // 2 ^ 17
 
@@ -141,7 +141,7 @@ public:
 		
 	uint32_t getAddress();
 	
-	
+	uint8_t getUsedBlocks();
 	
 	void setAddress(uint32_t Address);
 	
@@ -157,11 +157,9 @@ public:
 		
 	void eraseAll();
 	
-	void eraseFast();
-	
 	void dumpBytes(uint32_t StartRecord, uint32_t TotalRecords);
 
-	void eraseBlock(uint32_t BlockNumber);
+	void eraseBlock(uint8_t BlockNumber);
 
 	bool addRecord();
 
@@ -229,7 +227,7 @@ private:
 	unsigned long bt = 0;
 	bool RecordAdded = false;
 	bool ReadComplete = false;
-	char stng[MAXCHARLEN];
+	char stng[BULLETDB_MAXCHARLEN];
 		
 	size_t pageOffset;
 	
@@ -269,9 +267,9 @@ private:
 	float *fdata[MAX_FIELDS];
 	double *ddata[MAX_FIELDS];
 	char *cdata[MAX_FIELDS];
-	char buf[MAXCHARLEN];
+	char buf[BULLETDB_MAXCHARLEN];
 	uint8_t len = 0;
-	int8_t bytes[MAXCHARLEN];
+	int8_t bytes[BULLETDB_MAXCHARLEN];
 	
 	// header stuff
 	uint8_t Header_RecordLength;
@@ -302,15 +300,12 @@ private:
 	void B4ToBytes(uint8_t *bytes, uint32_t var);
 	void FloatToBytes(uint8_t *bytes, float var);
 	void DoubleToBytes(uint8_t *bytes, double var);
-	
-	
+		
 	// method to put the recordlengh to address 0
 	void putDatabaseRecordLength();
 	void saveField(uint8_t Bytes, uint8_t Field);
 	void saveField(uint8_t Array[], uint8_t Bytes, uint8_t Field);
 		
 };
-
-
 
 #endif
