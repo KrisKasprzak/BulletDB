@@ -139,15 +139,15 @@ uint64_t BulletDB::getUniqueChipID(){
 	
 	if ((aBytes[0] == 0) || (aBytes[0] == NULL_RECORD)) {
 		strcpy(ChipJEDEC,"INVALID CHIP");
-		//return false;
+		return false;
 	}
 	else if ((aBytes[1] == 0) || (aBytes[1] == NULL_RECORD)) {
 		strcpy(ChipJEDEC,"INVALID CHIP");
-		//return false;
+		return false;
 	}
 	else if ((aBytes[2] == 0) || (aBytes[2] == NULL_RECORD)) {
 		strcpy(ChipJEDEC,"INVALID CHIP");
-		//return false;
+		return false;
 	}
 	else {
 		sprintf(ChipJEDEC,"%02x:%02x:%02x",aBytes[0],aBytes[1],aBytes[2]);
