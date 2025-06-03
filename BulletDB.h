@@ -31,7 +31,7 @@
 	1.8		01/2025			kasprzak			added ability to getDataBaseRecordSize and private put
 	2.0		02/2025			kasprzak			changed ReadData to ReadBytes and now read in sequence the field lenght (2x faster)
 	3.0		05/2025			kasprzak			changed WriteData to WriteBytes and now read in sequence the field lenght (5x faster), added faster block erase method
-
+	3.2		06/2025			kasprzak			general cleanup
 */
 
 #ifndef BULLETDB_MENU_H
@@ -50,7 +50,7 @@
 
 #include <SPI.h>  
 
-#define BULLET_DB_VER 3.0
+#define BULLET_DB_VER 3.2
 
 #define NULL_RECORD 0xFF
 
@@ -220,9 +220,6 @@ private:
 	
 	uint8_t ReadData();
 	void ReadBytes(uint8_t Length);
-	
-	//bool WriteBytes(uint8_t Array[], uint8_t Length);
-	void WriteByte(uint8_t data);
 		
 	unsigned long bt = 0;
 	bool RecordAdded = false;
@@ -232,15 +229,10 @@ private:
 	size_t pageOffset;
 	
 	char ChipJEDEC[15];
-	uint8_t a1Byte[1];
-	uint8_t a2Bytes[2];
-	uint8_t a4Bytes[4];
-	uint8_t a8Bytes[8];	
+
 	uint8_t aBytes[8];
-	
-	
-	char dateBytes[8];
-	bool NewCard = false;
+		
+	bool NewChip = false;
 	uint8_t ReadSpeed = 0;
 	uint32_t TempAddress = 0;
 	uint32_t Address = 0;
@@ -273,8 +265,7 @@ private:
 	
 	// header stuff
 	uint8_t Header_RecordLength;
-	uint8_t Header_FieldCount = 0;
-	
+	uint8_t Header_FieldCount = 0;	
 	uint8_t Header_DataType[MAX_FIELDS];
 	uint8_t Header_FieldStart[MAX_FIELDS];
 	uint8_t Header_FieldLength[MAX_FIELDS];
@@ -300,11 +291,17 @@ private:
 	void B4ToBytes(uint8_t *bytes, uint32_t var);
 	void FloatToBytes(uint8_t *bytes, float var);
 	void DoubleToBytes(uint8_t *bytes, double var);
-		
-	// method to put the recordlengh to address 0
+	
+	
+	// method to put the recordlength to address 0
 	void putDatabaseRecordLength();
+	
+	// bool WriteBytes(uint8_t Array[], uint8_t Length); // no longer used, but keeping just incase I need to provide a dedicated write method
+	void WriteByte(uint8_t data);
 	void saveField(uint8_t Bytes, uint8_t Field);
 	void saveField(uint8_t Array[], uint8_t Bytes, uint8_t Field);
+	void saveHeaderField(uint8_t Bytes, uint8_t Field);
+	void saveHeaderField(uint8_t Array[], uint8_t Bytes, uint8_t Field);
 		
 };
 
