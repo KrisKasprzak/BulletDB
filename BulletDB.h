@@ -32,6 +32,7 @@
 	2.0		02/2025			kasprzak			changed ReadData to ReadBytes and now read in sequence the field lenght (2x faster)
 	3.0		05/2025			kasprzak			changed WriteData to WriteBytes and now read in sequence the field lenght (5x faster), added faster block erase method
 	3.2		06/2025			kasprzak			general cleanup
+	3.3		08/2025			kasprzak			backing out writing arrays as it's just too unreliable on a Teensy 4.0.
 */
 
 #ifndef BULLETDB_MENU_H
@@ -50,21 +51,21 @@
 
 #include <SPI.h>  
 
-#define BULLET_DB_VER 3.2
+#define BULLET_DB_VER 3.31
 
 #define NULL_RECORD 0xFF
 
 #define MAX_FIELDS 50
 #define BULLETDB_MAXCHARLEN 20
 
-#define CARD_SIZE 8388608 // 2 ^ 17
+#define CARD_SIZE 8388608 // 2 ^ 23
 
 #define PAGE_SIZE 256
 #define SECTOR_SIZE 4096
 #define BLOCK_SIZE 65536
 
-#define SPEED_WRITE 25000000
-#define SPEED_READ  25000000
+#define SPEED_WRITE 60000000 // not sure if this will work on T3.2, works on T4.0
+#define SPEED_READ  25000000 // seems the max
 
 #define DT_U8 	1
 #define DT_INT 	2
@@ -89,7 +90,7 @@
 #define CMD_WRITE_STATUS_REG   0x01
 #define CMD_READ_STATUS_REG    0x05
 #define CMD_SECTOR_ERASE       0x20
-#define STAT_WIP 1
+#define STAT_WIP 			   0x01
 
 #define CMD_BLOCK64K_ERASE     0xD8 
 #define WRITEENABLE   0x06
@@ -147,7 +148,7 @@ public:
 	
 	void gotoRecord(uint32_t Record);
 	
-	uint32_t getFirstRecord(uint16_t Data, uint8_t FieldID);
+	uint32_t getFirstRecord(uint8_t Data, uint8_t FieldID);
 		
 	uint32_t getCurrentRecord();
 	
@@ -212,20 +213,20 @@ public:
 		
 private:
 
-	unsigned char c;
-
 	void DebugData(int Line);
-	
 	bool readChipJEDEC();
-	
-	uint8_t ReadData();
+	uint8_t ReadByte();
 	void ReadBytes(uint8_t Length);
-		
-	unsigned long bt = 0;
+	
+	void WriteByte(uint8_t data);
+	void CompleteTask();	
+	void putDatabaseRecordLength();
+	
 	bool RecordAdded = false;
 	bool ReadComplete = false;
 	char stng[BULLETDB_MAXCHARLEN];
-		
+	
+	// uint8_t c;
 	size_t pageOffset;
 	
 	char ChipJEDEC[15];
@@ -233,13 +234,12 @@ private:
 	uint8_t aBytes[8];
 		
 	bool NewChip = false;
-	uint8_t ReadSpeed = 0;
 	uint32_t TempAddress = 0;
 	uint32_t Address = 0;
 	uint32_t MaxRecords = 0;
 	uint32_t LastRecord = 0;
 	uint32_t CurrentRecord = 0;
-	uint32_t i= 0, j= 0;
+	uint32_t i = 0, j = 0;
 		
 	uint8_t FieldCount = 0;
 	uint8_t cspin = 0;
@@ -260,8 +260,6 @@ private:
 	double *ddata[MAX_FIELDS];
 	char *cdata[MAX_FIELDS];
 	char buf[BULLETDB_MAXCHARLEN];
-	uint8_t len = 0;
-	int8_t bytes[BULLETDB_MAXCHARLEN];
 	
 	// header stuff
 	uint8_t Header_RecordLength;
@@ -269,7 +267,6 @@ private:
 	uint8_t Header_DataType[MAX_FIELDS];
 	uint8_t Header_FieldStart[MAX_FIELDS];
 	uint8_t Header_FieldLength[MAX_FIELDS];
-	
 	uint8_t 	*u8hdata[MAX_FIELDS];
 	int 		*inthdata[MAX_FIELDS];
 	int16_t 	*i16hdata[MAX_FIELDS];
@@ -277,31 +274,14 @@ private:
 	int32_t 	*i32hdata[MAX_FIELDS];
 	uint32_t 	*u32hdata[MAX_FIELDS];
 	float 		*fhdata[MAX_FIELDS];
-	double 		*dhdata[MAX_FIELDS];
+	double 		*dhdata[MAX_FIELDS];	
 
-	unsigned char flash_wait_for_write = 0;
-	uint8_t readvalue;
-	void write_pause();
-	unsigned char flash_read_status();
-		
-	void B2ToBytes(uint8_t *bytes, int16_t var);
-	void B2ToBytes(uint8_t *bytes, uint16_t var);
-	void B4ToBytes(uint8_t *bytes, int var);
-	void B4ToBytes(uint8_t *bytes, int32_t var);
-	void B4ToBytes(uint8_t *bytes, uint32_t var);
-	void FloatToBytes(uint8_t *bytes, float var);
-	void DoubleToBytes(uint8_t *bytes, double var);
-	
-	
-	// method to put the recordlength to address 0
-	void putDatabaseRecordLength();
-	
 	// bool WriteBytes(uint8_t Array[], uint8_t Length); // no longer used, but keeping just incase I need to provide a dedicated write method
-	void WriteByte(uint8_t data);
+	
 	void saveField(uint8_t Bytes, uint8_t Field);
-	void saveField(uint8_t Array[], uint8_t Bytes, uint8_t Field);
-	void saveHeaderField(uint8_t Bytes, uint8_t Field);
-	void saveHeaderField(uint8_t Array[], uint8_t Bytes, uint8_t Field);
+	//void saveField(uint8_t Array[], uint8_t Bytes, uint8_t Field);
+	//void saveHeaderField(uint8_t Bytes, uint8_t Field);
+	//void saveHeaderField(uint8_t Array[], uint8_t Bytes, uint8_t Field);
 		
 };
 
