@@ -1,25 +1,8 @@
 /*
-  The MIT License (MIT)
-
-  library writen by Kris Kasprzak
-  
-  Permission is hereby granted, free of charge, to any person obtaining a copy of
-  this software and associated documentation files (the "Software"), to deal in
-  the Software without restriction, including without limitation the rights to
-  use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
-  the Software, and to permit persons to whom the Software is furnished to do so,
-  subject to the following conditions:
-  The above copyright notice and this permission notice shall be included in all
-  copies or substantial portions of the Software.
-  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-  FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-  COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-  IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-  On a personal note, if you develop an application or product using this library 
-  and make millions of dollars, I'm happy for you!
+	
+	Author/owner: by Kris Kasprzak
+	
+	This library is not open source and usage is not authorized by others
 
 	rev		date			author				change
 	1.0		10/2022			kasprzak			initial code
@@ -33,6 +16,7 @@
 	3.0		05/2025			kasprzak			changed WriteData to WriteBytes and now read in sequence the field lenght (5x faster), added faster block erase method
 	3.2		06/2025			kasprzak			general cleanup
 	3.3		08/2025			kasprzak			backing out writing arrays as it's just too unreliable on a Teensy 4.0.
+ 	3.5		08/2025			kasprzak			Got writing stream of bytes to flash working reliably
 */
 
 #ifndef BULLETDB_MENU_H
@@ -51,11 +35,12 @@
 
 #include <SPI.h>  
 
-#define BULLET_DB_VER 3.31
+#define BULLET_DB_VER 3.51
 
 #define NULL_RECORD 0xFF
 
 #define MAX_FIELDS 50
+#define BULLETDB_MAXREXORDLENGTH 100
 #define BULLETDB_MAXCHARLEN 20
 
 #define CARD_SIZE 8388608 // 2 ^ 23
@@ -187,16 +172,14 @@ public:
 	uint32_t getTotalSpace();	
 		
 	uint32_t ChipCapacity = 0;
+	
 	uint8_t getField(uint8_t Data, uint8_t Field);
 	int getField(int Data, uint8_t Field);
 	int16_t getField(int16_t Data, uint8_t Field);
 	uint16_t getField(uint16_t Data, uint8_t Field);
 	int32_t getField(int32_t Data, uint8_t Field);
 	uint32_t getField(uint32_t Data, uint8_t Field);
-	float getField(float Record, uint8_t Field);
-	
-	float getFieldSpecial(float Data, uint8_t Field);
-		
+	float getField(float Record, uint8_t Field);		
 	double getField(double Record, uint8_t Field);
 	char *getCharField(uint8_t Field);
 		
@@ -208,25 +191,28 @@ public:
 	uint32_t getHeaderField(uint32_t Data, uint8_t Field);
 	float getHeaderField(float Record, uint8_t Field);
 	double getHeaderField(double Record, uint8_t Field);
-	char *getHeaderField(uint8_t Field);
-	char *getCharHeaderField(uint8_t Field);
+
 		
 private:
 
+	uint8_t RECORD[BULLETDB_MAXREXORDLENGTH];
+
 	void DebugData(int Line);
 	bool readChipJEDEC();
-	uint8_t ReadByte();
-	void ReadBytes(uint8_t Length);
 	
+	uint8_t ReadByte();
+	void ReadBytes(uint8_t Length);	
 	void WriteByte(uint8_t data);
+	void writeRecord();
+	
 	void CompleteTask();	
+	
 	void putDatabaseRecordLength();
 	
 	bool RecordAdded = false;
 	bool ReadComplete = false;
 	char stng[BULLETDB_MAXCHARLEN];
 	
-	// uint8_t c;
 	size_t pageOffset;
 	
 	char ChipJEDEC[15];
@@ -240,7 +226,7 @@ private:
 	uint32_t LastRecord = 0;
 	uint32_t CurrentRecord = 0;
 	uint32_t i = 0, j = 0;
-		
+	uint8_t q = 0;
 	uint8_t FieldCount = 0;
 	uint8_t cspin = 0;
 	uint8_t RecordLength= 0, DataBaseRecordLength= 0;
@@ -278,10 +264,6 @@ private:
 
 	// bool WriteBytes(uint8_t Array[], uint8_t Length); // no longer used, but keeping just incase I need to provide a dedicated write method
 	
-	void saveField(uint8_t Bytes, uint8_t Field);
-	//void saveField(uint8_t Array[], uint8_t Bytes, uint8_t Field);
-	//void saveHeaderField(uint8_t Bytes, uint8_t Field);
-	//void saveHeaderField(uint8_t Array[], uint8_t Bytes, uint8_t Field);
 		
 };
 
